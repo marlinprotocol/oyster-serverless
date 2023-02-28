@@ -1,0 +1,20 @@
+[package]
+name = "serverlessrust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_json="1.0"
+serde = { version = "1.0", features = ["derive"] }
+reqwest = { version = "0.11.9", features = ["json"]}
+tokio = { version = "1.16.1", features = ["full"] }
+openssl = { version = "0.10", features = ["vendored"] }
+actix-web = "4"
+ethers="1.0.2"
+dotenv = "0.15.0"
+thiserror = "1.0.15"
+
+[lib]
+name = "oyster"
