@@ -47,7 +47,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let free_port = get_free_port();
 
     //Generating the js and capnp file
-    let js_file = create_js_file(decoded_calldata,&file_name,workerd_runtime_path.to_string()).await;
+    let js_file = create_js_file(&decoded_calldata,&file_name,&workerd_runtime_path).await;
 
     match js_file {
         Ok(_) => {println!("\nJS file generated.")},
@@ -61,7 +61,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         }
     };
 
-    let capnp_file = create_capnp_file(&file_name,free_port,workerd_runtime_path.to_string()).await;
+    let capnp_file = create_capnp_file(&file_name,free_port,&workerd_runtime_path).await;
     
     match capnp_file {
         Ok(_) => {println!("Config file generated.")},

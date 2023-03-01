@@ -81,7 +81,7 @@ pub async fn get_workerd_response(port:u16) -> Result<String, Box<dyn std::error
 } 
 
 //Generating a capnp configuration file
-pub async fn create_capnp_file(tx_hash:&String,free_port:u16,workerd_runtime_path:String)-> std::io::Result<()> {
+pub async fn create_capnp_file(tx_hash:&str,free_port:u16,workerd_runtime_path:&str)-> std::io::Result<()> {
 
     let capnp_data = format!("using Workerd = import \"/workerd/workerd.capnp\";
 
@@ -95,23 +95,23 @@ pub async fn create_capnp_file(tx_hash:&String,free_port:u16,workerd_runtime_pat
       compatibilityDate = \"2022-09-16\",
     );");
    
-    let mut file = File::create(workerd_runtime_path+&tx_hash+".capnp").await?;
+    let mut file = File::create(workerd_runtime_path.to_string()+&tx_hash+".capnp").await?;
     file.write_all(capnp_data.as_bytes()).await?;
     Ok(())
 }
 
 //Generating the js file using the decoded calldata
-pub async fn create_js_file(decoded_calldata:String,tx_hash:&String,workerd_runtime_path:String)-> std::io::Result<()> {
-    let mut file = File::create(workerd_runtime_path+&tx_hash+".js").await?;
+pub async fn create_js_file(decoded_calldata:&str,tx_hash:&str,workerd_runtime_path:&str)-> std::io::Result<()> {
+    let mut file = File::create(workerd_runtime_path.to_string()+&tx_hash+".js").await?;
     file.write_all(decoded_calldata.as_bytes()).await?;
     Ok(())
 }
 
 //Running users js code using workerd and the generated config file
-pub async fn run_workerd_runtime(tx_hash:&String,workerd_runtime_path:String) -> Result<Child, Box<dyn std::error::Error>>{
+pub async fn run_workerd_runtime(tx_hash:&str,workerd_runtime_path:String) -> Result<Child, Box<dyn std::error::Error>>{
     let child = Command::new(workerd_runtime_path.to_string()+"workerd")
         .arg("serve")
-        .arg(workerd_runtime_path.to_string()+tx_hash+".capnp")
+        .arg(workerd_runtime_path.to_string()+&tx_hash+".capnp")
         .spawn()?;
         Ok(child)
 }
