@@ -108,7 +108,7 @@ pub async fn create_js_file(decoded_calldata:&str,tx_hash:&str,workerd_runtime_p
 }
 
 //Running users js code using workerd and the generated config file
-pub async fn run_workerd_runtime(tx_hash:&str,workerd_runtime_path:String) -> Result<Child, Box<dyn std::error::Error>>{
+pub async fn run_workerd_runtime(tx_hash:&str,workerd_runtime_path:&str) -> Result<Child, Box<dyn std::error::Error>>{
     let child = Command::new(workerd_runtime_path.to_string()+"workerd")
         .arg("serve")
         .arg(workerd_runtime_path.to_string()+&tx_hash+".capnp")

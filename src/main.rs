@@ -80,7 +80,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     //Run the workerd runtime with generated files
 
-    let workerd = run_workerd_runtime(&file_name,workerd_runtime_path.to_string()).await;
+    let workerd = run_workerd_runtime(&file_name,&workerd_runtime_path).await;
     
     if workerd.is_err() == true {
         let _deleted_js_file = delete_file(&js_file_path);
