@@ -10,8 +10,8 @@ use oyster::*;
 
 #[derive(Debug,Validate,Deserialize)]
 struct RequestBody {
-    #[validate(length(min = 1))]
-    tx_hash: String,
+    #[validate(length(min = 1),required)]
+    tx_hash: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -35,13 +35,42 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     }
 
     let workerd_runtime_path =  env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
-
-    let tx_hash = &jsonbody.tx_hash;
+    let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
     let file_name = tx_hash.to_string()+&Uuid::new_v4().to_string();
 
     //Fetching the transaction data using the transaction hash and decoding the calldata
-    let json_response = get_transaction_data(&tx_hash).await.unwrap()["result"]["input"].to_string();
-    let decoded_calldata = decode_call_data(&json_response);
+    // let json_response = get_transaction_data(&tx_hash).await.unwrap()["result"]["input"].to_string();
+    let json_response = match get_transaction_data(&tx_hash).await {
+        Ok(data) => {data["result"]["input"].to_string()},
+        Err(e) => {
+            let resp = JsonResponse { 
+                status: "error".to_string(), 
+                message: "Error fetching transacton data".to_string(), 
+                data: None };
+            println!("Error : {}",e);
+            return HttpResponse::InternalServerError().json(resp)
+        }
+    };
+
+    if json_response == "null" {
+        let resp = JsonResponse { 
+            status: "error".to_string(), 
+            message: "Error fetching the call data, make sure a valid tx_hash is provided".to_string(), 
+            data: None };
+        return HttpResponse::BadRequest().json(resp)
+    }
+
+    let decoded_calldata = match decode_call_data(&json_response){
+        Ok(data) => data,
+        Err(e) => {
+            println!("{}",e);
+            let resp = JsonResponse { 
+                status: "error".to_string(), 
+                message: "Error decoding the call data".to_string(), 
+                data: None };
+            return HttpResponse::InternalServerError().json(resp)
+        }
+    };
 
     //Fetching a free port
     let free_port = get_free_port();

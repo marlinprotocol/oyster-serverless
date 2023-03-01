@@ -20,7 +20,7 @@ pub fn get_free_port() -> u16 {
 }
 
 //Decoding calldata using ethers
-pub fn decode_call_data(json_data:&str) -> String {
+pub fn decode_call_data(json_data:&str) -> Result<String, Box<dyn std::error::Error>> {
     let json_response_size = json_data.len();
     let call_data = &json_data[11..json_response_size-1];
     let vec1 = hex_decode(call_data).unwrap();
@@ -30,7 +30,7 @@ pub fn decode_call_data(json_data:&str) -> String {
         data
     ).unwrap();
     let decoded_calldata = result[0].to_string();
-    decoded_calldata
+    Ok(decoded_calldata)
 }
 
 //Fetching the calldata using the txhash provided by the user
@@ -53,9 +53,12 @@ pub async fn get_transaction_data(_tx_hash:&str) -> Result<Value, Error> {
         .send()
         .await?;
 
-    let json_response = response.json::<Value>().await?;
+    let json_response = response.json::<Value>().await;
 
-    Ok(json_response)
+    match json_response {
+        Ok(data) => Ok(data),
+        Err(e) => Err(e)
+    }
 }
 
 //Wait for a port to bind
