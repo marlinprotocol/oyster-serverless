@@ -38,7 +38,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
 
     //Fetching the transaction data using the transaction hash and decoding the calldata
-    let json_response = match get_transaction_data(&tx_hash).await {
+    let json_response = match get_transaction_data(tx_hash).await {
         Ok(data) => data["result"]["input"].to_string(),
         Err(e) => {
             let resp = JsonResponse {
@@ -119,7 +119,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path).await;
 
-    if workerd.is_err() == true {
+    if workerd.is_err() {
         let _deleted_js_file = delete_file(&js_file_path);
         let _deleted_capnp_file = delete_file(&capnp_file_path);
         let workerd_error = workerd.err();
@@ -161,18 +161,18 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         let resp = JsonResponse {
             status: "success".to_string(),
             message: "Response successfully generated".to_string(),
-            data: Some(Value::String(workerd_respone.to_string())),
+            data: Some(Value::String(workerd_respone)),
         };
 
         println!("Generated response");
-        return HttpResponse::Ok().json(resp);
+        HttpResponse::Ok().json(resp)
     } else {
         let resp = JsonResponse {
             status: "error".to_string(),
             message: "Failed to bind to the workerd process".to_string(),
             data: None,
         };
-        return HttpResponse::InternalServerError().json(resp);
+        HttpResponse::InternalServerError().json(resp)
     }
 }
 

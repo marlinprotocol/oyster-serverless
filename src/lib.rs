@@ -15,8 +15,7 @@ use tokio::io::AsyncWriteExt;
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let port = listener.local_addr().unwrap().port();
-    port
+    listener.local_addr().unwrap().port()
 }
 
 //Decoding calldata using ethers
@@ -97,7 +96,7 @@ pub async fn create_capnp_file(
     );"
     );
 
-    let mut file = File::create(workerd_runtime_path.to_string() + &tx_hash + ".capnp").await?;
+    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".capnp").await?;
     file.write_all(capnp_data.as_bytes()).await?;
     Ok(())
 }
@@ -108,7 +107,7 @@ pub async fn create_js_file(
     tx_hash: &str,
     workerd_runtime_path: &str,
 ) -> std::io::Result<()> {
-    let mut file = File::create(workerd_runtime_path.to_string() + &tx_hash + ".js").await?;
+    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".js").await?;
     file.write_all(decoded_calldata.as_bytes()).await?;
     Ok(())
 }
@@ -120,7 +119,7 @@ pub async fn run_workerd_runtime(
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let child = Command::new(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
-        .arg(workerd_runtime_path.to_string() + &tx_hash + ".capnp")
+        .arg(workerd_runtime_path.to_string() + tx_hash + ".capnp")
         .spawn()?;
     Ok(child)
 }
