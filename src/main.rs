@@ -1,9 +1,12 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use dotenv::dotenv;
 use oyster::*;
+use psutil::process::Process;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::env;
+use std::time::Instant;
+use sysinfo::{ProcessExt, System, SystemExt};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -18,6 +21,32 @@ struct JsonResponse {
     status: String,
     message: String,
     data: Option<Value>,
+}
+
+#[derive(Serialize)]
+struct SystemInfo {
+    free_memory: u64,
+    running_workerd_processes: usize,
+}
+
+#[get("/serverlessinfo")]
+async fn serverlessinfo() -> HttpResponse {
+    let mut system = System::new_all();
+    system.refresh_all();
+
+    let ps = system
+        .processes()
+        .iter()
+        .filter(|(_, p)| p.name().starts_with("workerd"));
+    let running_worker_processes = ps.count();
+    let free_memory = system.free_memory();
+
+    let sys_info = SystemInfo {
+        free_memory: free_memory,
+        running_workerd_processes: running_worker_processes,
+    };
+
+    HttpResponse::Ok().json(sys_info)
 }
 
 #[get("/serverless")]
@@ -37,6 +66,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
 
+    let fetch_timer_start = Instant::now();
     //Fetching the transaction data using the transaction hash and decoding the calldata
     let json_response = match get_transaction_data(tx_hash).await {
         Ok(data) => data["result"]["input"].to_string(),
@@ -61,6 +91,11 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         return HttpResponse::BadRequest().json(resp);
     }
 
+    let fetch_timer_end = Instant::now();
+    let fetch_time = fetch_timer_end.duration_since(fetch_timer_start);
+
+    println!("\nTime taken to fetch data : {:?}", fetch_time);
+
     let decoded_calldata = match decode_call_data(&json_response) {
         Ok(data) => data,
         Err(e) => {
@@ -82,7 +117,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     match js_file {
         Ok(_) => {
-            println!("\nJS file generated.")
+            println!("JS file generated.")
         }
         Err(e) => {
             let resp = JsonResponse {
@@ -117,6 +152,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     //Run the workerd runtime with generated files
 
+    let workerd_execution_start = Instant::now();
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path).await;
 
     if workerd.is_err() {
@@ -141,12 +177,27 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     // Wait for the port to bind
     if wait_for_port(free_port) {
+        //Fetching workerd memory usage
+        let workerd_process_pid = workerd_process.id();
+        let process = Process::new(workerd_process_pid).expect("failed to get process info");
+        let mem_info = process.memory_info().unwrap();
+        println!("Workerd memory usage: {}", mem_info.rss());
+
+        //Fetching the workerd response
         let workerd_respone = get_workerd_response(free_port).await.unwrap();
+
+        //Terminating the workerd process once the response is fetched
         let kill_workerd_process = workerd_process.kill();
+
+        //Fetching the workerd execution duration
+        let workerd_execution_end = Instant::now();
+        let workerd_execution_duration =
+            workerd_execution_end.duration_since(workerd_execution_start);
+        println!("Workerd execution time: {:?}", workerd_execution_duration);
 
         match kill_workerd_process {
             Ok(_) => {
-                println!("Process {} terminated", workerd_process.id())
+                println!("Workerd process {} terminated.", workerd_process.id())
             }
             Err(_) => {
                 println!("Error terminating the process : {}", workerd_process.id())
@@ -183,7 +234,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .parse::<u16>()
         .expect("PORT must be a valid number");
-    let server = HttpServer::new(|| App::new().service(serverless))
+    let server = HttpServer::new(|| App::new().service(serverless).service(serverlessinfo))
         .bind(("0.0.0.0", port))?
         .run();
     println!("Server started on port {}", port);
