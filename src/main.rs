@@ -69,7 +69,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let fetch_timer_start = Instant::now();
     //Fetching the transaction data using the transaction hash and decoding the calldata
     let json_response = match get_transaction_data(tx_hash).await {
-        Ok(data) => data["result"]["input"].to_string(),
+        Ok(data) => data,
         Err(e) => {
             let resp = JsonResponse {
                 status: "error".to_string(),
@@ -80,6 +80,10 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             return HttpResponse::InternalServerError().json(resp);
         }
     };
+
+    let call_data = json_response["result"]["input"].to_string();
+    let user_address = json_response["result"]["from"].to_string();
+    println!("User address : {}", user_address);
 
     if json_response == "null" {
         let resp = JsonResponse {
@@ -94,9 +98,9 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let fetch_timer_end = Instant::now();
     let fetch_time = fetch_timer_end.duration_since(fetch_timer_start);
 
-    println!("\nTime taken to fetch data : {:?}", fetch_time);
+    println!("Time taken to fetch data : {:?}", fetch_time);
 
-    let decoded_calldata = match decode_call_data(&json_response) {
+    let decoded_calldata = match decode_call_data(&call_data) {
         Ok(data) => data,
         Err(e) => {
             println!("{}", e);
@@ -177,11 +181,12 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     // Wait for the port to bind
     if wait_for_port(free_port) {
+
         //Fetching workerd memory usage
         let workerd_process_pid = workerd_process.id();
         let process = Process::new(workerd_process_pid).expect("failed to get process info");
-        let mem_info = process.memory_info().unwrap();
-        println!("Workerd memory usage: {}", mem_info.rss());
+        let mem_info = process.memory_info().unwrap().rss();
+        println!("Workerd memory usage: {}", mem_info);
 
         //Fetching the workerd response
         let workerd_respone = get_workerd_response(free_port).await.unwrap();
@@ -192,7 +197,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         //Fetching the workerd execution duration
         let workerd_execution_end = Instant::now();
         let workerd_execution_duration =
-            workerd_execution_end.duration_since(workerd_execution_start);
+            workerd_execution_end.duration_since(workerd_execution_start).as_millis().to_string();
         println!("Workerd execution time: {:?}", workerd_execution_duration);
 
         match kill_workerd_process {
@@ -214,6 +219,21 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             message: "Response successfully generated".to_string(),
             data: Some(Value::String(workerd_respone)),
         };
+
+
+
+        let data = WorkerdData {
+            execution_time: workerd_execution_duration,
+            memory_usage:mem_info,
+            user_address:user_address
+        };
+    
+        let vsock_transmission = send_json_over_vsock(&data);
+
+        if vsock_transmission.is_err() {
+            let vsock_error = vsock_transmission.err();
+            println!("Vsock error : {:?}",vsock_error);
+        }
 
         println!("Generated response");
         HttpResponse::Ok().json(resp)
