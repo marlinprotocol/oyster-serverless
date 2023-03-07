@@ -85,7 +85,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let user_address = json_response["result"]["from"].to_string();
     println!("User address : {}", user_address);
 
-    if json_response == "null" {
+    if call_data == "null" {
         let resp = JsonResponse {
             status: "error".to_string(),
             message: "Error fetching the call data, make sure a valid tx_hash is provided"
