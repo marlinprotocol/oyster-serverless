@@ -1,9 +1,9 @@
+use crate::response::{WorkerdDataResponse};
 use ethers::abi::decode;
 use ethers::abi::ParamType;
 use ethers::core::utils::hex::decode as hex_decode;
 use libc::{rlimit, setrlimit, RLIMIT_AS};
 use reqwest::{Client, Error};
-use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs::remove_file;
 use std::io::Write;
@@ -15,13 +15,6 @@ use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use vsock::{VsockAddr, VsockStream, VMADDR_CID_ANY};
-
-#[derive(Serialize, Deserialize)]
-pub struct WorkerdDataResponse {
-    pub execution_time: String,
-    pub memory_usage: u64,
-    pub user_address: String,
-}
 
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
@@ -154,7 +147,7 @@ pub fn send_json_over_vsock(data: &WorkerdDataResponse) -> Result<(), Box<dyn st
 }
 
 // Set memory limit for an API call
-pub fn set_memory_limit(limit: u64) -> Result<(), String> {
+pub fn _set_memory_limit(limit: u64) -> Result<(), String> {
     let limit = rlimit {
         rlim_cur: limit,
         rlim_max: limit,
