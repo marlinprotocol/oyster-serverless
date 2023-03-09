@@ -1,8 +1,7 @@
-use crate::response::{WorkerdDataResponse};
+use crate::response::WorkerdDataResponse;
 use ethers::abi::decode;
 use ethers::abi::ParamType;
 use ethers::core::utils::hex::decode as hex_decode;
-use libc::{rlimit, setrlimit, RLIMIT_AS};
 use reqwest::{Client, Error};
 use serde_json::{json, Value};
 use std::fs::remove_file;
@@ -136,27 +135,11 @@ pub fn delete_file(file_path: &str) -> Result<(), Error> {
 
 //Creating a vsock socket and sending workerd data over vsock
 pub fn send_json_over_vsock(data: &WorkerdDataResponse) -> Result<(), Box<dyn std::error::Error>> {
-    // Create a new vsock socket and connect to the destination VM
+
     let mut socket = VsockStream::connect(&VsockAddr::new(VMADDR_CID_ANY, 5500))?;
 
-    // Serialize the data as JSON and send it over the socket
     let json_data = serde_json::to_string(data)?;
     socket.write_all(json_data.as_bytes())?;
-
-    Ok(())
-}
-
-// Set memory limit for an API call
-pub fn _set_memory_limit(limit: u64) -> Result<(), String> {
-    let limit = rlimit {
-        rlim_cur: limit,
-        rlim_max: limit,
-    };
-
-    let result = unsafe { setrlimit(RLIMIT_AS, &limit as *const rlimit) };
-    if result != 0 {
-        return Err("Failed to set memory limit".to_string());
-    }
 
     Ok(())
 }

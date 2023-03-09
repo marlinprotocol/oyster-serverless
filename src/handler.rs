@@ -1,7 +1,7 @@
 use crate::{
     model::RequestBody,
     response::{JsonResponse, SystemInfoResposne, WorkerdDataResponse},
-    serverless::*
+    serverless::*,
 };
 
 use actix_web::{get, web, HttpResponse, Responder};

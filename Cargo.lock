@@ -2736,7 +2736,6 @@ dependencies = [
  "actix-web",
  "dotenv",
  "ethers",
- "libc",
  "openssl",
  "psutil",
  "reqwest",
