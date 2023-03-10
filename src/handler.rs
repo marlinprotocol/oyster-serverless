@@ -21,7 +21,7 @@ async fn serverlessinfo() -> impl Responder {
     let ps = system
         .processes()
         .iter()
-        .filter(|(_, p)| p.name().starts_with("workerd"));
+        .filter(|(_, p)| p.name().starts_with("workerd") && p.memory() > 0);
     let running_worker_processes = ps.count();
     let free_memory = system.free_memory();
 
@@ -99,6 +99,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     //Fetching a free port
     let free_port = get_free_port();
+    println!("Free port :{}",&free_port);
 
     //Generating the js and capnp file
     let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
