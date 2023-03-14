@@ -1,6 +1,6 @@
 use crate::{
     model::RequestBody,
-    response::{JsonResponse, SystemInfoResposne, WorkerdDataResponse},
+    response::{JsonResponse},
     serverless::*,
 };
 
@@ -9,29 +9,8 @@ use psutil::process::Process;
 use serde_json::Value;
 use std::env;
 use std::time::Instant;
-use sysinfo::{ProcessExt, System, SystemExt};
 use uuid::Uuid;
 use validator::Validate;
-
-#[get("/serverlessinfo")]
-async fn serverlessinfo() -> impl Responder {
-    let mut system = System::new_all();
-    system.refresh_all();
-
-    let ps = system
-        .processes()
-        .iter()
-        .filter(|(_, p)| p.name().starts_with("workerd") && p.memory() > 0);
-    let running_worker_processes = ps.count();
-    let free_memory = system.free_memory();
-
-    let sys_info = SystemInfoResposne {
-        free_memory: free_memory,
-        running_workerd_processes: running_worker_processes,
-    };
-
-    HttpResponse::Ok().json(sys_info)
-}
 
 #[get("/serverless")]
 async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
@@ -67,7 +46,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     let call_data = json_response["result"]["input"].to_string();
     let user_address = json_response["result"]["from"].to_string();
-    println!("User address : {}", user_address);
+    println!("\nUser address : {}", user_address);
 
     if call_data == "null" {
         let resp = JsonResponse {
@@ -99,7 +78,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     //Fetching a free port
     let free_port = get_free_port();
-    println!("Free port :{}",&free_port);
+    println!("Free port :{}", &free_port);
 
     //Generating the js and capnp file
     let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
@@ -184,7 +163,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             .duration_since(workerd_execution_start)
             .as_millis()
             .to_string();
-        println!("Workerd execution time: {:?}", workerd_execution_duration);
+        println!("Workerd execution time: {}ms", workerd_execution_duration);
 
         match kill_workerd_process {
             Ok(_) => {
@@ -206,19 +185,6 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             data: Some(Value::String(workerd_respone)),
         };
 
-        let data = WorkerdDataResponse {
-            execution_time: workerd_execution_duration,
-            memory_usage: mem_info,
-            user_address: user_address,
-        };
-
-        let vsock_transmission = send_json_over_vsock(&data);
-
-        if vsock_transmission.is_err() {
-            let vsock_error = vsock_transmission.err();
-            println!("Vsock error : {:?}", vsock_error);
-        }
-
         println!("Generated response");
         HttpResponse::Ok().json(resp)
     } else {
@@ -233,7 +199,6 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
 pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("/api")
-        .service(serverlessinfo)
         .service(serverless);
 
     conf.service(scope);

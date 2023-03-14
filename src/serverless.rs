@@ -1,11 +1,9 @@
-use crate::response::WorkerdDataResponse;
 use ethers::abi::decode;
 use ethers::abi::ParamType;
 use ethers::core::utils::hex::decode as hex_decode;
 use reqwest::{Client, Error};
 use serde_json::{json, Value};
 use std::fs::remove_file;
-use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::process::{Child, Command};
@@ -13,7 +11,6 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use vsock::{VsockAddr, VsockStream, VMADDR_CID_ANY};
 
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
@@ -120,7 +117,10 @@ pub async fn run_workerd_runtime(
     tx_hash: &str,
     workerd_runtime_path: &str,
 ) -> Result<Child, Box<dyn std::error::Error>> {
-    let child = Command::new(workerd_runtime_path.to_string() + "workerd")
+    let child = Command::new("/usr/bin/cgexec")
+        .arg("-g")
+        .arg("memory:workerdcgroup")
+        .arg(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
         .arg(workerd_runtime_path.to_string() + tx_hash + ".capnp")
         .spawn()?;
@@ -130,16 +130,5 @@ pub async fn run_workerd_runtime(
 //Deleting files (js,capnp) once the response is generated
 pub fn delete_file(file_path: &str) -> Result<(), Error> {
     let _remove_file = remove_file(file_path);
-    Ok(())
-}
-
-//Creating a vsock socket and sending workerd data over vsock
-pub fn send_json_over_vsock(data: &WorkerdDataResponse) -> Result<(), Box<dyn std::error::Error>> {
-
-    let mut socket = VsockStream::connect(&VsockAddr::new(VMADDR_CID_ANY, 5500))?;
-
-    let json_data = serde_json::to_string(data)?;
-    socket.write_all(json_data.as_bytes())?;
-
     Ok(())
 }
