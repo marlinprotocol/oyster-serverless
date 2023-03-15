@@ -12,6 +12,8 @@ use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
+
+
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -58,7 +60,7 @@ pub async fn get_transaction_data(_tx_hash: &str) -> Result<Value, Error> {
 pub fn wait_for_port(port: u16) -> bool {
     let start_time = Instant::now();
 
-    while start_time.elapsed() < Duration::from_secs(5) {
+    while start_time.elapsed() < Duration::from_secs(1) {
         match TcpStream::connect(format!("127.0.0.1:{}", port)) {
             Ok(_) => return true,
             Err(_) => sleep(Duration::from_millis(1)),
