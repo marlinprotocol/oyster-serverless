@@ -1,8 +1,4 @@
-use crate::{
-    model::RequestBody,
-    response::{JsonResponse},
-    serverless::*,
-};
+use crate::{model::RequestBody, response::JsonResponse, serverless::*};
 
 use actix_web::{get, web, HttpResponse, Responder};
 use psutil::process::Process;
@@ -11,8 +7,6 @@ use std::env;
 use std::time::Instant;
 use uuid::Uuid;
 use validator::Validate;
-
-
 
 #[get("/serverless")]
 async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
@@ -141,7 +135,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let mut workerd_process = match workerd {
         Ok(data) => data,
         Err(e) => {
-            println!("{}",e);
+            println!("{}", e);
             panic!("{}", e)
         }
     };
@@ -191,22 +185,21 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         println!("Generated response");
         HttpResponse::Ok().json(resp)
     } else {
-
         let workerd_status = workerd_process.try_wait();
         match workerd_status {
             Ok(status) => {
                 let error_status = status.unwrap().to_string();
-                println!("Workerd execution error : {}",error_status);
+                println!("Workerd execution error : {}", error_status);
                 if error_status == "signal: 9 (SIGKILL)" {
                     let resp = JsonResponse {
                         status: "error".to_string(),
                         message: "Workerd ran out of memory".to_string(),
                         data: None,
                     };
-                    return HttpResponse::InternalServerError().json(resp)
+                    return HttpResponse::InternalServerError().json(resp);
                 }
-            },
-            Err(err) => panic!("Error fetching workerd exit status : {}",err)
+            }
+            Err(err) => panic!("Error fetching workerd exit status : {}", err),
         }
 
         let resp = JsonResponse {
@@ -219,8 +212,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api")
-        .service(serverless);
+    let scope = web::scope("/api").service(serverless);
 
     conf.service(scope);
 }

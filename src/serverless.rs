@@ -12,8 +12,6 @@ use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-
-
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();

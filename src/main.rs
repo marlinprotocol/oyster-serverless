@@ -3,7 +3,6 @@ mod model;
 mod response;
 mod serverless;
 
-
 use actix_web::{App, HttpServer};
 use dotenv::dotenv;
 use std::env;
