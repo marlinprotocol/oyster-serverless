@@ -2,7 +2,7 @@
 
 ## Cgroup setup
 
-Create a cgroup for workerd :
+<b>Create a cgroup for workerd :</b>
 
 ```
 sudo cgcreate -g memory:workerdcgroup
@@ -21,13 +21,13 @@ sudo cgset -r memory.max=100M workerdcgroup
 
 ## Serverless application
 
-Run the serverless application :
+<b>Run the serverless application :</b>
 
 ```
 cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust
 ```
 
-Make a request to the serveless application :
+<b>Make a request to the serveless application :</b>
 
 Endpoit : `http://localhost:6000/api/serverless`
 
