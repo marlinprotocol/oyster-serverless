@@ -29,7 +29,7 @@ cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverl
 
 <b>Make a request to the serveless application :</b>
 
-Endpoit : `http://localhost:6000/api/serverless`
+Endpoint : `http://localhost:6000/api/serverless`
 
 JSON body :
 
