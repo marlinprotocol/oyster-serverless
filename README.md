@@ -1,6 +1,6 @@
 # Oyster-serverless
 
-#### Cgroup setup
+## Cgroup setup
 
 Create a cgroup for workerd :
 
@@ -19,7 +19,7 @@ sudo cgset -r memory.max=100M workerdcgroup
 ```
 
 
-#### Serverless setup
+## Serverless application
 
 Run the serverless application :
 
