@@ -10,9 +10,18 @@
 
 <b>Setup cgroups for workerd :</b>
 
+`Note : serverless supports both version of cgroups (v1 & v2)`
+
+cgroup v1 : 
 ```
-sudo ./cgroup_setup.sh
+sudo ./cgroupv1_setup.sh
 ```
+
+cgroup v2 : 
+```
+sudo ./cgroupv2_setup.sh
+```
+
 
 
 ## Running serverless application
