@@ -3,6 +3,7 @@ use ethers::abi::ParamType;
 use ethers::core::utils::hex::decode as hex_decode;
 use reqwest::{Client, Error};
 use serde_json::{json, Value};
+use std::fs;
 use std::fs::remove_file;
 use std::net::TcpListener;
 use std::net::TcpStream;
@@ -116,10 +117,11 @@ pub async fn create_js_file(
 pub async fn run_workerd_runtime(
     tx_hash: &str,
     workerd_runtime_path: &str,
+    available_cgroup: &str
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let child = Command::new("/usr/bin/cgexec")
         .arg("-g")
-        .arg("memory:workerdcgroup")
+        .arg("memory:".to_string()+available_cgroup)
         .arg(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
         .arg(workerd_runtime_path.to_string() + tx_hash + ".capnp")
@@ -131,4 +133,20 @@ pub async fn run_workerd_runtime(
 pub fn delete_file(file_path: &str) -> Result<(), Error> {
     let _remove_file = remove_file(file_path);
     Ok(())
+}
+
+//Fetching an available cgroup from the list of cgroups generated at boot
+pub fn find_available_cgroup() -> Result<String, std::io::Error> {
+    let cgroup_list = ["workerd1","workerd2","workerd3","workerd4","workerd5"];
+
+    for cgroup_name in cgroup_list.iter() {
+        let cgroup_path = "/sys/fs/cgroup/".to_string()+cgroup_name+"/cgroup.procs";
+        let running_processes = fs::read_to_string(cgroup_path)?;
+
+        if running_processes.len() == 0 {
+            return Ok(cgroup_name.to_string())
+        }
+    }
+
+    Ok(String::from("No available cgroup"))
 }
