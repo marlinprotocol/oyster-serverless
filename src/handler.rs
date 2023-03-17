@@ -114,10 +114,29 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
+    let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
+    let available_cgroup = match find_available_cgroup(&cgroup_version){
+        Ok(cgroup) => cgroup,
+        Err(e) => {panic!("{}", e)}
+    };
+
+    if available_cgroup == "No available cgroup"{
+        let resp = JsonResponse {
+            status: "error".to_string(),
+            message: "Server busy".to_string(),
+            data: None,
+        };
+
+        let _deleted_js_file = delete_file(&js_file_path).expect("Error deleting JS file");
+        let _deleted_capnp_file = delete_file(&capnp_file_path).expect("Error deleting configuration file");
+
+        return HttpResponse::InternalServerError().json(resp);
+    }
+
     //Run the workerd runtime with generated files
 
     let workerd_execution_start = Instant::now();
-    let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path).await;
+    let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
 
     if workerd.is_err() {
         let _deleted_js_file = delete_file(&js_file_path);
@@ -202,9 +221,12 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             Err(err) => panic!("Error fetching workerd exit status : {}", err),
         }
 
+        let _deleted_js_file = delete_file(&js_file_path).expect("Error deleting JS file");
+        let _deleted_capnp_file = delete_file(&capnp_file_path).expect("Error deleting configuration file");
+
         let resp = JsonResponse {
             status: "error".to_string(),
-            message: "Failed to bind to the workerd process".to_string(),
+            message: "Failed to fetch response".to_string(),
             data: None,
         };
         HttpResponse::InternalServerError().json(resp)
