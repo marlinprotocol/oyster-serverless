@@ -13,5 +13,3 @@ sudo cgset -r memory.max=100M workerd4
 
 cgcreate -g memory:workerd5
 sudo cgset -r memory.max=100M workerd5
-
-echo "\nCGROUP_VERSION=2" >> .env 

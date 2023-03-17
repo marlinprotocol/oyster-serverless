@@ -13,5 +13,3 @@ echo 100M > /sys/fs/cgroup/memory/workerd4/memory.limit_in_bytes
 
 cgcreate -g memory:workerd5
 echo 100M > /sys/fs/cgroup/memory/workerd5/memory.limit_in_bytes
-
-echo "\nCGROUP_VERSION=1" >> .env
