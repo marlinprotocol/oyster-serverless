@@ -1,6 +1,6 @@
 # Oyster-serverless
 
-### Getting started
+## Getting started
 
 <b>Install the following packages : </b>
 
@@ -15,7 +15,7 @@ sudo ./cgroup_setup.sh
 ```
 
 
-### Running serverless application
+## Running serverless application
 
 <b>Run the serverless application :</b>
 
