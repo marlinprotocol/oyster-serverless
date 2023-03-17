@@ -1,25 +1,21 @@
 # Oyster-serverless
 
-## Cgroup setup
+### Getting started
 
-<b>Create a cgroup for workerd :</b>
+<b>Install the following packages : </b>
+
+* build-essential 
+* Clang 11+ (e.g. package `clang` on Debian Bullseye)
+* libc++ 11+ (e.g. packages `libc++-dev` and `libc++abi-dev` on Debian Bullseye)
+
+<b>Setup cgroups for workerd :</b>
 
 ```
-sudo cgcreate -g memory:workerdcgroup
-```
-
-Set memory limit to 100mb for the workerdcgroup (cgroup v1)
-```
-echo 100M > /sys/fs/cgroup/memory/workerdcgroup/memory.limit_in_bytes
-```
-
-Set memory limit to 100mb for the workerdcgroup (cgroup v2)
-```
-sudo cgset -r memory.max=100M workerdcgroup
+sudo ./cgroup_setup.sh
 ```
 
 
-## Serverless application
+### Running serverless application
 
 <b>Run the serverless application :</b>
 

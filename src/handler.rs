@@ -114,8 +114,8 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
-
-    let available_cgroup = match find_available_cgroup(){
+    let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
+    let available_cgroup = match find_available_cgroup(&cgroup_version){
         Ok(cgroup) => cgroup,
         Err(e) => {panic!("{}", e)}
     };

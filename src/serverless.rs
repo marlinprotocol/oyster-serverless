@@ -136,14 +136,19 @@ pub fn delete_file(file_path: &str) -> Result<(), Error> {
 }
 
 //Fetching an available cgroup from the list of cgroups generated at boot
-pub fn find_available_cgroup() -> Result<String, std::io::Error> {
+pub fn find_available_cgroup(cgroup_version:&str) -> Result<String, std::io::Error> {
     let cgroup_list = ["workerd1","workerd2","workerd3","workerd4","workerd5"];
 
     for cgroup_name in cgroup_list.iter() {
-        let cgroup_path = "/sys/fs/cgroup/".to_string()+cgroup_name+"/cgroup.procs";
+        let mut cgroup_path = "/sys/fs/cgroup/memory/".to_string()+cgroup_name+"/cgroup.procs";
+        if cgroup_version=="2" {
+            cgroup_path = "/sys/fs/cgroup/".to_string()+cgroup_name+"/cgroup.procs";
+        }
+
         let running_processes = fs::read_to_string(cgroup_path)?;
 
         if running_processes.len() == 0 {
+            println!("Free cgroup for workerd found");
             return Ok(cgroup_name.to_string())
         }
     }
