@@ -115,20 +115,32 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
     let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
-    let available_cgroup = match find_available_cgroup(&cgroup_version){
+    let available_cgroup = match find_available_cgroup(&cgroup_version) {
         Ok(cgroup) => cgroup,
-        Err(e) => {panic!("{}", e)}
+        Err(e) => {
+            println!("{}", e);
+            let resp = JsonResponse {
+                status: "error".to_string(),
+                message: "There was an error assigning resources to your function".to_string(),
+                data: None,
+            };
+
+            delete_file(&js_file_path).expect("Error deleting JS file");
+            delete_file(&capnp_file_path).expect("Error deleting configuration file");
+
+            return HttpResponse::InternalServerError().json(resp);
+        }
     };
 
-    if available_cgroup == "No available cgroup"{
+    if available_cgroup == "No available cgroup" {
         let resp = JsonResponse {
             status: "error".to_string(),
             message: "Server busy".to_string(),
             data: None,
         };
 
-        let _deleted_js_file = delete_file(&js_file_path).expect("Error deleting JS file");
-        let _deleted_capnp_file = delete_file(&capnp_file_path).expect("Error deleting configuration file");
+        delete_file(&js_file_path).expect("Error deleting JS file");
+        delete_file(&capnp_file_path).expect("Error deleting configuration file");
 
         return HttpResponse::InternalServerError().json(resp);
     }
@@ -221,8 +233,8 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             Err(err) => panic!("Error fetching workerd exit status : {}", err),
         }
 
-        let _deleted_js_file = delete_file(&js_file_path).expect("Error deleting JS file");
-        let _deleted_capnp_file = delete_file(&capnp_file_path).expect("Error deleting configuration file");
+        delete_file(&js_file_path).expect("Error deleting JS file");
+        delete_file(&capnp_file_path).expect("Error deleting configuration file");
 
         let resp = JsonResponse {
             status: "error".to_string(),

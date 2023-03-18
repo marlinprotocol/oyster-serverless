@@ -115,16 +115,16 @@ pub async fn create_js_file(
 
 //Running users js code using workerd and the generated config file
 pub async fn run_workerd_runtime(
-    tx_hash: &str,
+    file_name: &str,
     workerd_runtime_path: &str,
-    available_cgroup: &str
+    available_cgroup: &str,
 ) -> Result<Child, Box<dyn std::error::Error>> {
     let child = Command::new("/usr/bin/cgexec")
         .arg("-g")
-        .arg("memory:".to_string()+available_cgroup)
+        .arg("memory:".to_string() + available_cgroup)
         .arg(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
-        .arg(workerd_runtime_path.to_string() + tx_hash + ".capnp")
+        .arg(workerd_runtime_path.to_string() + file_name + ".capnp")
         .spawn()?;
     Ok(child)
 }
@@ -136,20 +136,20 @@ pub fn delete_file(file_path: &str) -> Result<(), Error> {
 }
 
 //Fetching an available cgroup from the list of cgroups generated at boot
-pub fn find_available_cgroup(cgroup_version:&str) -> Result<String, std::io::Error> {
-    let cgroup_list = ["workerd1","workerd2","workerd3","workerd4","workerd5"];
+pub fn find_available_cgroup(cgroup_version: &str) -> Result<String, std::io::Error> {
+    let cgroup_list = ["workerd1", "workerd2", "workerd3", "workerd4", "workerd5"];
 
     for cgroup_name in cgroup_list.iter() {
-        let mut cgroup_path = "/sys/fs/cgroup/memory/".to_string()+cgroup_name+"/cgroup.procs";
-        if cgroup_version=="2" {
-            cgroup_path = "/sys/fs/cgroup/".to_string()+cgroup_name+"/cgroup.procs";
+        let mut cgroup_path = "/sys/fs/cgroup/memory/".to_string() + cgroup_name + "/cgroup.procs";
+        if cgroup_version == "2" {
+            cgroup_path = "/sys/fs/cgroup/".to_string() + cgroup_name + "/cgroup.procs";
         }
 
         let running_processes = fs::read_to_string(cgroup_path)?;
 
-        if running_processes.len() == 0 {
+        if running_processes.is_empty() {
             println!("Free cgroup for workerd found");
-            return Ok(cgroup_name.to_string())
+            return Ok(cgroup_name.to_string());
         }
     }
 
