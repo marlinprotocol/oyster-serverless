@@ -1,14 +1,13 @@
 use crate::{model::RequestBody, response::JsonResponse, serverless::*};
 
-use actix_web::{get, web, HttpResponse, Responder};
-use psutil::process::Process;
+use actix_web::{post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
 use std::time::Instant;
 use uuid::Uuid;
 use validator::Validate;
 
-#[get("/serverless")]
+#[post("/serverless")]
 async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
@@ -23,9 +22,13 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
+
+    // let input_body = jsonbody.input.as_ref();
+
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
 
     let fetch_timer_start = Instant::now();
+    
     //Fetching the transaction data using the transaction hash and decoding the calldata
     let json_response = match get_transaction_data(tx_hash).await {
         Ok(data) => data,
@@ -42,6 +45,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     let call_data = json_response["result"]["input"].to_string();
     let user_address = json_response["result"]["from"].to_string();
+
     println!("\nUser address : {}", user_address);
 
     if call_data == "null" {
@@ -74,7 +78,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
     //Fetching a free port
     let free_port = get_free_port();
-    println!("Free port :{}", &free_port);
+    println!("Free port: {}", &free_port);
 
     //Generating the js and capnp file
     let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
@@ -151,8 +155,8 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
 
     if workerd.is_err() {
-        let _deleted_js_file = delete_file(&js_file_path);
-        let _deleted_capnp_file = delete_file(&capnp_file_path);
+        delete_file(&js_file_path).expect("Error deleting JS file");
+        delete_file(&capnp_file_path).expect("Error deleting configuration file");
         let workerd_error = workerd.err();
         println!("Error running the workerd runtime: {:?}", workerd_error);
         let resp = JsonResponse {
@@ -166,21 +170,37 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let mut workerd_process = match workerd {
         Ok(data) => data,
         Err(e) => {
-            println!("{}", e);
-            panic!("{}", e)
+            println!("{}",e);
+            delete_file(&js_file_path).expect("Error deleting JS file");
+            delete_file(&capnp_file_path).expect("Error deleting configuration file");
+            let resp = JsonResponse {
+                status: "error".to_string(),
+                message: "Failed to execute the code".to_string(),
+                data: None,
+            };
+            return HttpResponse::InternalServerError().json(resp)
         }
     };
 
     // Wait for the port to bind
     if wait_for_port(free_port) {
-        //Fetching workerd memory usage
-        let workerd_process_pid = workerd_process.id();
-        let process = Process::new(workerd_process_pid).expect("failed to get process info");
-        let mem_info = process.memory_info().unwrap().rss();
-        println!("Workerd memory usage: {}", mem_info);
 
         //Fetching the workerd response
-        let workerd_respone = get_workerd_response(free_port).await.unwrap();
+        let workerd_response = get_workerd_response(free_port, jsonbody.input.as_ref().cloned())
+            .await.unwrap();
+
+        if workerd_response.status() != reqwest::StatusCode::OK {
+            delete_file(&js_file_path).expect("Error deleting JS file");
+            delete_file(&capnp_file_path).expect("Error deleting configuration file");
+            let resp = JsonResponse {
+                status: "error".to_string(),
+                message: "Failed to fetch response from the server".to_string(),
+                data: None,
+            };
+            return HttpResponse::InternalServerError().json(resp)
+        }
+
+        let workerd_json_response = workerd_response.text().await.unwrap();
 
         //Terminating the workerd process once the response is fetched
         let kill_workerd_process = workerd_process.kill();
@@ -210,7 +230,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         let resp = JsonResponse {
             status: "success".to_string(),
             message: "Response successfully generated".to_string(),
-            data: Some(Value::String(workerd_respone)),
+            data: Some(Value::String(workerd_json_response)),
         };
 
         println!("Generated response");

@@ -46,12 +46,15 @@ cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverl
 
 <b>Make a request to the serveless application :</b>
 
-Endpoint : `http://localhost:6000/api/serverless`
+Endpoint (POST) : `http://localhost:6000/api/serverless`
 
 JSON body :
 
 ```
 {
-    "tx_hash":"0x1fbebe0ca25cc3d98c20e0f9b9f3f17030dc0f632d7791a9d4c57afc3e4524fe"
+    "tx_hash":"0xe53e82630ca8ea3386ec6acf556850255f64d39eb1ef53194e90dd288b0f89ba",
+    "input": {
+        "name":"marlin"
+    }
 }
 ```
