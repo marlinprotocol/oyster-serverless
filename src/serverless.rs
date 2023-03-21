@@ -107,7 +107,6 @@ pub fn find_available_cgroup(cgroup_version: &str) -> Result<String, std::io::Er
         let running_processes = fs::read_to_string(cgroup_path)?;
 
         if running_processes.is_empty() {
-            println!("Free cgroup for workerd found");
             return Ok(cgroup_name.to_string());
         }
     }
@@ -131,7 +130,6 @@ pub async fn run_workerd_runtime(
         .spawn()?;
     Ok(child)
 }
-
 
 //Wait for a port to bind
 pub fn wait_for_port(port: u16) -> bool {
