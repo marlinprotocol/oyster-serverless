@@ -8,6 +8,7 @@ use dotenv::dotenv;
 use slog::{info, o, Drain, Logger};
 use std::env;
 
+//Logging with slog
 fn configure_log() -> Logger {
     let decorator = slog_term::TermDecorator::new().build();
 
@@ -33,7 +34,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(log.clone()))
             .configure(handler::config)
     })
-    .bind(("0.0.0.0", port))?
+    .bind(("0.0.0.0", port))
+    .expect(&format!("Can not bind to {}", &port))
     .run()
     .await
 }

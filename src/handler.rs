@@ -10,6 +10,7 @@ use validator::Validate;
 
 #[post("/serverless")]
 async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) -> impl Responder {
+    info!(log, "*********NEW**REQUEST*******");
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
         error!(log, "{}", err);
@@ -23,8 +24,6 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
 
     let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
-
-    // let input_body = jsonbody.input.as_ref();
 
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
 
@@ -47,7 +46,6 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     let call_data = json_response["result"]["input"].to_string();
     let user_address = json_response["result"]["from"].to_string();
 
-    info!(log, "*********NEW**REQUEST*******");
     info!(log, "User address : {}", user_address);
 
     if call_data == "null" {
@@ -199,7 +197,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
             delete_file(&capnp_file_path).expect("Error deleting configuration file");
             let resp = JsonResponse {
                 status: "error".to_string(),
-                message: "Failed to fetch response from the server".to_string(),
+                message: "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code.".to_string(),
                 data: None,
             };
             return HttpResponse::InternalServerError().json(resp);

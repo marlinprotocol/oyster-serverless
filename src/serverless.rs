@@ -32,22 +32,22 @@ pub async fn get_transaction_data(_tx_hash: &str) -> Result<Value, Error> {
     });
 
     let response = client.post(url).json(&request).send().await?;
+    let json_response = response.json::<Value>().await?;
 
-    let json_response = response.json::<Value>().await;
-
-    match json_response {
-        Ok(data) => Ok(data),
-        Err(e) => Err(e),
-    }
+    Ok(json_response)
 }
 
 //Decoding calldata using ethers
 pub fn decode_call_data(json_data: &str) -> Result<String, Box<dyn std::error::Error>> {
+    //Remove the first 11 characters and last 1 character from the string
     let json_response_size = json_data.len();
     let call_data = &json_data[11..json_response_size - 1];
+    //Convert hex string to byte array
     let vec1 = hex_decode(call_data).unwrap();
     let data: &[u8] = vec1.as_slice();
+    //Decode the byte array using ethers
     let result = decode(vec![ParamType::String].as_slice(), data).unwrap();
+    //Convert the decoded calldata to string
     let decoded_calldata = result[0].to_string();
     Ok(decoded_calldata)
 }
@@ -127,6 +127,7 @@ pub async fn run_workerd_runtime(
         .arg("serve")
         .arg(workerd_runtime_path.to_string() + file_name + ".capnp")
         .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
         .spawn()?;
     Ok(child)
 }
