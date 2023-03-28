@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
             .configure(handler::config)
     })
     .bind(("0.0.0.0", port))
-    .expect(&format!("Can not bind to {}", &port))
+    .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
     .run()
     .await
 }

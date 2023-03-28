@@ -44,10 +44,20 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     };
 
     let call_data = json_response["result"]["input"].to_string();
-    let user_address = json_response["result"]["from"].to_string();
+    let contract_address = json_response["result"]["to"].to_string();
 
-    info!(log, "User address : {}", user_address);
+    //Checking if the contract address is correct
+    if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
+        let resp = JsonResponse {
+            status: "error".to_string(),
+            message: "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02"
+                .to_string(),
+            data: None,
+        };
+        return HttpResponse::BadRequest().json(resp);
+    }
 
+    //Checking if the call data is null
     if call_data == "null" {
         let resp = JsonResponse {
             status: "error".to_string(),
@@ -118,6 +128,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
+    //Finding an available cgroup
     let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
     let available_cgroup = match find_available_cgroup(&cgroup_version) {
         Ok(cgroup) => cgroup,
