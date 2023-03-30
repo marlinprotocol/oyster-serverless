@@ -2,18 +2,17 @@ use crate::{model::RequestBody, response::JsonResponse, serverless::*};
 
 use actix_web::{post, web, HttpResponse, Responder};
 use serde_json::Value;
-use slog::{error, info, Logger};
 use std::env;
 use std::time::Instant;
 use uuid::Uuid;
 use validator::Validate;
 
 #[post("/serverless")]
-async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) -> impl Responder {
-    info!(log, "*********NEW**REQUEST*******");
+async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
+    log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
-        error!(log, "{}", err);
+        log::error!("{}", err);
         let resp = JsonResponse {
             status: "error".to_string(),
             message: "Invalid payload".to_string(),
@@ -38,7 +37,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
                 message: "Error fetching transacton data".to_string(),
                 data: None,
             };
-            error!(log, "Error : {}", e);
+            log::error!("Error : {}", e);
             return HttpResponse::InternalServerError().json(resp);
         }
     };
@@ -71,12 +70,12 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     let fetch_timer_end = Instant::now();
     let fetch_time = fetch_timer_end.duration_since(fetch_timer_start);
 
-    info!(log, "Time taken to fetch data : {:?}", fetch_time);
+    log::info!("Time taken to fetch data : {:?}", fetch_time);
 
     let decoded_calldata = match decode_call_data(&call_data) {
         Ok(data) => data,
         Err(e) => {
-            error!(log, "{}", e);
+            log::error!("{}", e);
             let resp = JsonResponse {
                 status: "error".to_string(),
                 message: "Error decoding the call data".to_string(),
@@ -88,14 +87,14 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
 
     //Fetching a free port
     let free_port = get_free_port();
-    info!(log, "Free port: {}", &free_port);
+    log::info!("Free port: {}", &free_port);
 
     //Generating the js and capnp file
     let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
 
     match js_file {
         Ok(_) => {
-            info!(log, "JS file generated.")
+            log::info!("JS file generated.")
         }
         Err(e) => {
             let resp = JsonResponse {
@@ -103,7 +102,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
                 message: "Error generating the JS file".to_string(),
                 data: None,
             };
-            error!(log, "Error : {}", e);
+            log::error!("Error : {}", e);
             return HttpResponse::InternalServerError().json(resp);
         }
     };
@@ -112,7 +111,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
 
     match capnp_file {
         Ok(_) => {
-            info!(log, "Config file generated.")
+            log::info!("Config file generated.")
         }
         Err(e) => {
             let resp = JsonResponse {
@@ -120,7 +119,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
                 message: "Error generating the configuration file".to_string(),
                 data: None,
             };
-            error!(log, "Error : {}", e);
+            log::error!("Error : {}", e);
             return HttpResponse::InternalServerError().json(resp);
         }
     }
@@ -133,7 +132,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     let available_cgroup = match find_available_cgroup(&cgroup_version) {
         Ok(cgroup) => cgroup,
         Err(e) => {
-            error!(log, "{}", e);
+            log::error!("{}", e);
             let resp = JsonResponse {
                 status: "error".to_string(),
                 message: "There was an error assigning resources to your function".to_string(),
@@ -169,10 +168,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
         delete_file(&js_file_path).expect("Error deleting JS file");
         delete_file(&capnp_file_path).expect("Error deleting configuration file");
         let workerd_error = workerd.err();
-        error!(
-            log,
-            "Error running the workerd runtime: {:?}", workerd_error
-        );
+        log::error!("Error running the workerd runtime: {:?}", workerd_error);
         let resp = JsonResponse {
             status: "error".to_string(),
             message: "Error running the workerd runtime".to_string(),
@@ -184,7 +180,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
     let mut workerd_process = match workerd {
         Ok(data) => data,
         Err(e) => {
-            error!(log, "{}", e);
+            log::error!("{}", e);
             delete_file(&js_file_path).expect("Error deleting JS file");
             delete_file(&capnp_file_path).expect("Error deleting configuration file");
             let resp = JsonResponse {
@@ -225,21 +221,14 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
             .duration_since(workerd_execution_start)
             .as_millis()
             .to_string();
-        info!(
-            log,
-            "Workerd execution time: {}ms", workerd_execution_duration
-        );
+        log::info!("Workerd execution time: {}ms", workerd_execution_duration);
 
         match kill_workerd_process {
             Ok(_) => {
-                info!(log, "Workerd process {} terminated.", workerd_process.id())
+                log::info!("Workerd process {} terminated.", workerd_process.id())
             }
             Err(_) => {
-                error!(
-                    log,
-                    "Error terminating the process : {}",
-                    workerd_process.id()
-                )
+                log::error!("Error terminating the process : {}", workerd_process.id())
             }
         }
 
@@ -254,14 +243,14 @@ async fn serverless(jsonbody: web::Json<RequestBody>, log: web::Data<Logger>) ->
             data: Some(Value::String(workerd_json_response)),
         };
 
-        info!(log, "Generated response");
+        log::info!("Generated response");
         HttpResponse::Ok().json(resp)
     } else {
         let workerd_status = workerd_process.try_wait();
         match workerd_status {
             Ok(status) => {
                 let error_status = status.unwrap().to_string();
-                error!(log, "Workerd execution error : {}", error_status);
+                log::error!("Workerd execution error : {}", error_status);
                 if error_status == "signal: 9 (SIGKILL)" {
                     let resp = JsonResponse {
                         status: "error".to_string(),
