@@ -8,7 +8,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[post("/serverless")]
-async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
+pub async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
@@ -276,7 +276,9 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     }
 }
 
+
 pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("/api").service(serverless);
     conf.service(scope);
 }
+
