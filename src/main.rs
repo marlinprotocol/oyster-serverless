@@ -30,7 +30,6 @@ async fn main() -> std::io::Result<()> {
     server.await
 }
 
-
 #[cfg(test)]
 pub mod serverlesstest {
 
@@ -59,12 +58,10 @@ pub mod serverlesstest {
 
         assert!(resp.status().is_success());
         assert_eq!(resp.status(), http::StatusCode::OK);
-
     }
 
     #[actix_web::test]
     async fn invalid_payload_test() {
-
         dotenv().ok();
         let app = test::init_service(App::new().configure(handler::config)).await;
 

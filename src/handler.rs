@@ -276,9 +276,7 @@ pub async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     }
 }
 
-
 pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("/api").service(serverless);
     conf.service(scope);
 }
-
