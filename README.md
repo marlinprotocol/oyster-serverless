@@ -14,7 +14,7 @@
 
 `Note : serverless supports both version of cgroups (v1 & v2)`
 
-<b>cgroups v1 </b>
+<b>cgroups v1 setup</b>
 ```
 sudo ./cgroupv1_setup.sh
 ```
@@ -25,7 +25,7 @@ Please include the following in the .env file :
 CGROUP_VERSION=1
 ```
 
-<b>cgroups v2 </b>
+<b>cgroups v2 setup</b>
 ```
 sudo ./cgroupv2_setup.sh
 ```
