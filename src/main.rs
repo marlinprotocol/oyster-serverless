@@ -18,11 +18,14 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
-    log::info!("Server started on port {}", port);
+    log::info!("Make sure you have done the cgroup setup on your system");
 
-    HttpServer::new(move || App::new().configure(handler::config))
+    let server = HttpServer::new(move || App::new().configure(handler::config))
         .bind(("0.0.0.0", port))
         .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
-        .run()
-        .await
+        .run();
+
+    log::info!("Server started on port {}", port);
+
+    server.await
 }

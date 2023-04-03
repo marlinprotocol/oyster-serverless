@@ -9,7 +9,6 @@ use std::fs;
 use std::fs::remove_file;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::process::Stdio;
 use std::process::{Child, Command};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -126,8 +125,7 @@ pub async fn run_workerd_runtime(
         .arg(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
         .arg(workerd_runtime_path.to_string() + file_name + ".capnp")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
+        .arg("--verbose")
         .spawn()?;
     Ok(child)
 }

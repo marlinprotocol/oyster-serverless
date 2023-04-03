@@ -247,6 +247,7 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         HttpResponse::Ok().json(resp)
     } else {
         let workerd_status = workerd_process.try_wait();
+
         match workerd_status {
             Ok(status) => {
                 let error_status = status.unwrap().to_string();
