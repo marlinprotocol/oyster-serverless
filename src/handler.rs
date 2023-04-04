@@ -3,12 +3,13 @@ use crate::{model::RequestBody, response::JsonResponse, serverless::*};
 use actix_web::{post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
+use std::io::{BufReader, BufRead};
 use std::time::Instant;
 use uuid::Uuid;
 use validator::Validate;
 
 #[post("/serverless")]
-pub async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
+async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
@@ -246,8 +247,27 @@ pub async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
         log::info!("Generated response");
         HttpResponse::Ok().json(resp)
     } else {
-        let workerd_status = workerd_process.try_wait();
+        let stderr = workerd_process.stderr.take().unwrap();
+        let reader = BufReader::new(stderr);
+    
+        let stderr_lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
+        let stderr_output = stderr_lines.join("\n");
+        
+        if stderr_output.len() > 0 {
+            let resp = JsonResponse {
+                status: "error".to_string(),
+                message: "Failed to generate a response. Please ensure that you provide valid JS code".to_string(),
+                data: Some(Value::String(stderr_output)),
+            };
 
+            delete_file(&js_file_path).expect("Error deleting JS file");
+            delete_file(&capnp_file_path).expect("Error deleting configuration file");
+            return HttpResponse::InternalServerError().json(resp);
+        }
+
+
+
+        let workerd_status = workerd_process.try_wait();
         match workerd_status {
             Ok(status) => {
                 let error_status = status.unwrap().to_string();
@@ -269,7 +289,7 @@ pub async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
         let resp = JsonResponse {
             status: "error".to_string(),
-            message: "Failed to fetch response".to_string(),
+            message: "Failed to generate a response. Please ensure that you provide valid JS code.".to_string(),
             data: None,
         };
         HttpResponse::InternalServerError().json(resp)
@@ -280,3 +300,4 @@ pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("/api").service(serverless);
     conf.service(scope);
 }
+

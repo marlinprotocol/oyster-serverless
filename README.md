@@ -64,3 +64,18 @@ JSON body :
     }
 }
 ```
+</br>
+## Running the tests
+
+
+<b>Generate the tests : </b>
+```
+cargo test --no-run
+```
+
+<b>Execute the generated test output with root permission :</b>
+
+For example
+```
+sudo ./target/x86_64-unknown-linux-musl/debug/deps/serverlessrust-4ab6898ba3e00b88
+```

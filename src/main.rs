@@ -41,7 +41,6 @@ pub mod serverlesstest {
     async fn valid_input_test() {
         dotenv().ok();
         let app = test::init_service(App::new().configure(handler::config)).await;
-
         let valid_payload = json!({
             "tx_hash": "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113",
             "input": {
@@ -55,9 +54,90 @@ pub mod serverlesstest {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-
-        assert!(resp.status().is_success());
         assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn interacting_with_wrong_smartcontract() {
+        dotenv().ok();
+        let app = test::init_service(App::new().configure(handler::config)).await;
+
+        let invalid_payload = json!({
+            "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546",
+            "input": {
+                "num": 10
+            }
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/api/serverless")
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn invalid_txhash() {
+        dotenv().ok();
+        let app = test::init_service(App::new().configure(handler::config)).await;
+
+        let invalid_payload = json!({
+            "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8557",
+            "input": {
+                "num": 10
+            }
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/api/serverless")
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn txhash_not_provided() {
+        dotenv().ok();
+        let app = test::init_service(App::new().configure(handler::config)).await;
+
+        let invalid_payload = json!({});
+
+        let req = test::TestRequest::post()
+            .uri("/api/serverless")
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+
+    #[actix_web::test]
+    async fn invalid_js_code_in_calldata() {
+        dotenv().ok();
+        let app = test::init_service(App::new().configure(handler::config)).await;
+
+        let invalid_payload = json!({
+            "tx_hash": "0x898ebb6887cba44eb53601af2ace75ef1bfadc78ebfeb55ced33d9b83f8d8d4e",
+            "input": {
+                "num": 10
+            }
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/api/serverless")
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::INTERNAL_SERVER_ERROR);
     }
 
     #[actix_web::test]
@@ -76,7 +156,6 @@ pub mod serverlesstest {
 
         let resp = test::call_service(&app, req).await;
 
-        assert!(!resp.status().is_server_error());
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
 }
