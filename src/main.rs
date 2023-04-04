@@ -3,27 +3,40 @@ mod model;
 mod response;
 mod serverless;
 
-use actix_web::{App, HttpServer};
+use crate::model::AppState;
+use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 
 use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    log::info!("Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+
     dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let cgroup_list = serverless::get_cgroup_list();
+    if cgroup_list.is_empty() {
+        log::error!("No cgroups found. Please create cgroups and try again.");
+        std::process::exit(1);
+    }
 
     let port: u16 = env::var("PORT")
         .unwrap()
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
-    log::info!("Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-
-    let server = HttpServer::new(move || App::new().configure(handler::config))
-        .bind(("0.0.0.0", port))
-        .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
-        .run();
+    let server = HttpServer::new(move || {
+        App::new()
+            .app_data(web::Data::new(AppState {
+                cgroup_list: cgroup_list.clone(),
+            }))
+            .configure(handler::config)
+    })
+    .bind(("0.0.0.0", port))
+    .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
+    .run();
 
     log::info!("Server started on port {}", port);
 
@@ -85,7 +98,7 @@ pub mod serverlesstest {
         let app = test::init_service(App::new().configure(handler::config)).await;
 
         let invalid_payload = json!({
-            "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8557",
+            "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c85",
             "input": {
                 "num": 10
             }

@@ -8,3 +8,7 @@ pub struct RequestBody {
     pub tx_hash: Option<String>,
     pub input: Option<HashMap<String, serde_json::Value>>,
 }
+
+pub struct AppState {
+    pub cgroup_list: Vec<String>,
+}

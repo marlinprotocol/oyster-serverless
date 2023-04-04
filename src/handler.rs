@@ -1,15 +1,22 @@
-use crate::{model::RequestBody, response::JsonResponse, serverless::*};
+use crate::{
+    model::{AppState, RequestBody},
+    response::JsonResponse,
+    serverless::*,
+};
 
 use actix_web::{post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 use std::time::Instant;
 use uuid::Uuid;
 use validator::Validate;
 
 #[post("/serverless")]
-async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
+async fn serverless(
+    jsonbody: web::Json<RequestBody>,
+    cgroup_list: web::Data<AppState>,
+) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
@@ -129,8 +136,9 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
     //Finding an available cgroup
+    let cgroup_list = &cgroup_list.cgroup_list;
     let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
-    let available_cgroup = match find_available_cgroup(&cgroup_version) {
+    let available_cgroup = match find_available_cgroup(&cgroup_version, cgroup_list) {
         Ok(cgroup) => cgroup,
         Err(e) => {
             log::error!("{}", e);
@@ -249,14 +257,16 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
     } else {
         let stderr = workerd_process.stderr.take().unwrap();
         let reader = BufReader::new(stderr);
-    
+
         let stderr_lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
         let stderr_output = stderr_lines.join("\n");
-        
-        if stderr_output.len() > 0 {
+
+        if !stderr_output.is_empty() {
             let resp = JsonResponse {
                 status: "error".to_string(),
-                message: "Failed to generate a response. Please ensure that you provide valid JS code".to_string(),
+                message:
+                    "Failed to generate a response. Please ensure that you provide valid JS code"
+                        .to_string(),
                 data: Some(Value::String(stderr_output)),
             };
 
@@ -264,8 +274,6 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
             delete_file(&capnp_file_path).expect("Error deleting configuration file");
             return HttpResponse::InternalServerError().json(resp);
         }
-
-
 
         let workerd_status = workerd_process.try_wait();
         match workerd_status {
@@ -289,7 +297,8 @@ async fn serverless(jsonbody: web::Json<RequestBody>) -> impl Responder {
 
         let resp = JsonResponse {
             status: "error".to_string(),
-            message: "Failed to generate a response. Please ensure that you provide valid JS code.".to_string(),
+            message: "Failed to generate a response. Please ensure that you provide valid JS code."
+                .to_string(),
             data: None,
         };
         HttpResponse::InternalServerError().json(resp)
@@ -300,4 +309,3 @@ pub fn config(conf: &mut web::ServiceConfig) {
     let scope = web::scope("/api").service(serverless);
     conf.service(scope);
 }
-

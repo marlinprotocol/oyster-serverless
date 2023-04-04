@@ -95,9 +95,10 @@ pub async fn create_capnp_file(
 }
 
 //Fetching an available cgroup from the list of cgroups generated at boot
-pub fn find_available_cgroup(cgroup_version: &str) -> Result<String, std::io::Error> {
-    let cgroup_list = ["workerd1", "workerd2", "workerd3", "workerd4", "workerd5"];
-
+pub fn find_available_cgroup(
+    cgroup_version: &str,
+    cgroup_list: &[String],
+) -> Result<String, std::io::Error> {
     for cgroup_name in cgroup_list.iter() {
         let mut cgroup_path = "/sys/fs/cgroup/memory/".to_string() + cgroup_name + "/cgroup.procs";
         if cgroup_version == "2" {
@@ -165,4 +166,23 @@ pub async fn get_workerd_response(
 pub fn delete_file(file_path: &str) -> Result<(), Error> {
     let _remove_file = remove_file(file_path);
     Ok(())
+}
+
+//Get cgroup list
+pub fn get_cgroup_list() -> Vec<String> {
+    let mut cgroup_list: Vec<String> = Vec::new();
+    let dir_entries = fs::read_dir("/sys/fs/cgroup").unwrap();
+
+    for entry in dir_entries {
+        let path = entry.unwrap().path();
+        if let Some(filename) = path.file_name() {
+            if let Some(name) = filename.to_str() {
+                if name.starts_with("workerd") {
+                    cgroup_list.push(name.to_string());
+                }
+            }
+        }
+    }
+
+    cgroup_list
 }
