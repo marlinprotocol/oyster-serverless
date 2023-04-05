@@ -96,12 +96,12 @@ pub async fn create_capnp_file(
 
 //Fetching an available cgroup from the list of cgroups generated at boot
 pub fn find_available_cgroup(
-    cgroup_version: &str,
+    cgroup_version: i8,
     cgroup_list: &[String],
 ) -> Result<String, std::io::Error> {
     for cgroup_name in cgroup_list.iter() {
         let mut cgroup_path = "/sys/fs/cgroup/memory/".to_string() + cgroup_name + "/cgroup.procs";
-        if cgroup_version == "2" {
+        if cgroup_version == 2 {
             cgroup_path = "/sys/fs/cgroup/".to_string() + cgroup_name + "/cgroup.procs";
         }
 
@@ -169,10 +169,14 @@ pub fn delete_file(file_path: &str) -> Result<(), Error> {
 }
 
 //Get cgroup list
-pub fn get_cgroup_list() -> Vec<String> {
+pub fn get_cgroup_list(cgroup_version: i8) -> Result<Vec<String>, std::io::Error> {
     let mut cgroup_list: Vec<String> = Vec::new();
-    let dir_entries = fs::read_dir("/sys/fs/cgroup").unwrap();
+    let mut cgroup_path = "/sys/fs/cgroup/memory";
+    if cgroup_version == 2 {
+        cgroup_path = "/sys/fs/cgroup";
+    }
 
+    let dir_entries = fs::read_dir(cgroup_path).unwrap();
     for entry in dir_entries {
         let path = entry.unwrap().path();
         if let Some(filename) = path.file_name() {
@@ -184,5 +188,5 @@ pub fn get_cgroup_list() -> Vec<String> {
         }
     }
 
-    cgroup_list
+    Ok(cgroup_list)
 }

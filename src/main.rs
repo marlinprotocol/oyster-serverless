@@ -11,26 +11,30 @@ use std::env;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    log::info!("Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-
     dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
-    let cgroup_list = serverless::get_cgroup_list();
-    if cgroup_list.is_empty() {
-        log::error!("No cgroups found. Please create cgroups and try again.");
-        std::process::exit(1);
-    }
 
     let port: u16 = env::var("PORT")
         .unwrap()
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
+    let cgroup_version: i8 = env::var("CGROUP_VERSION")
+        .unwrap()
+        .parse::<i8>()
+        .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+    let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+    if cgroup_list.is_empty() {
+        log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+        std::process::exit(1);
+    }
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(AppState {
-                cgroup_list: cgroup_list.clone(),
+                cgroup_list:cgroup_list.clone(),
+                cgroup_version,
             }))
             .configure(handler::config)
     })
@@ -53,7 +57,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn valid_input_test() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
         let valid_payload = json!({
             "tx_hash": "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113",
             "input": {
@@ -73,7 +96,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn interacting_with_wrong_smartcontract() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
 
         let invalid_payload = json!({
             "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546",
@@ -95,7 +137,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn invalid_txhash() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
 
         let invalid_payload = json!({
             "tx_hash": "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c85",
@@ -117,7 +178,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn txhash_not_provided() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
 
         let invalid_payload = json!({});
 
@@ -134,7 +214,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn invalid_js_code_in_calldata() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
 
         let invalid_payload = json!({
             "tx_hash": "0x898ebb6887cba44eb53601af2ace75ef1bfadc78ebfeb55ced33d9b83f8d8d4e",
@@ -156,7 +255,26 @@ pub mod serverlesstest {
     #[actix_web::test]
     async fn invalid_payload_test() {
         dotenv().ok();
-        let app = test::init_service(App::new().configure(handler::config)).await;
+        let cgroup_version: i8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<i8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
 
         let invalid_payload = json!({
             "tx_hash": "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113"

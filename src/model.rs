@@ -11,4 +11,5 @@ pub struct RequestBody {
 
 pub struct AppState {
     pub cgroup_list: Vec<String>,
+    pub cgroup_version: i8,
 }

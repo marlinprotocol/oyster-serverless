@@ -15,7 +15,7 @@ use validator::Validate;
 #[post("/serverless")]
 async fn serverless(
     jsonbody: web::Json<RequestBody>,
-    cgroup_list: web::Data<AppState>,
+    appstate: web::Data<AppState>,
 ) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
@@ -136,9 +136,8 @@ async fn serverless(
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
     //Finding an available cgroup
-    let cgroup_list = &cgroup_list.cgroup_list;
-    let cgroup_version = env::var("CGROUP_VERSION").expect("CGROUP_VERSION options : 1 or 2");
-    let available_cgroup = match find_available_cgroup(&cgroup_version, cgroup_list) {
+    let cgroup_list = &appstate.cgroup_list;
+    let available_cgroup = match find_available_cgroup(appstate.cgroup_version, cgroup_list) {
         Ok(cgroup) => cgroup,
         Err(e) => {
             log::error!("{}", e);
