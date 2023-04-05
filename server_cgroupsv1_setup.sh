@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#Fetching total memory in enclave and generating cgroups
 total_mem_kb=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 total_mem_gb=$(echo "scale=2; $total_mem_kb / 1024 / 1024" | bc)
 available_mem_gb=$(echo "$total_mem_gb - 2" | bc )
