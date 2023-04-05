@@ -96,7 +96,7 @@ pub async fn create_capnp_file(
 
 //Fetching an available cgroup from the list of cgroups generated at boot
 pub fn find_available_cgroup(
-    cgroup_version: i8,
+    cgroup_version: u8,
     cgroup_list: &[String],
 ) -> Result<String, std::io::Error> {
     for cgroup_name in cgroup_list.iter() {
@@ -169,7 +169,7 @@ pub fn delete_file(file_path: &str) -> Result<(), Error> {
 }
 
 //Get cgroup list
-pub fn get_cgroup_list(cgroup_version: i8) -> Result<Vec<String>, std::io::Error> {
+pub fn get_cgroup_list(cgroup_version: u8) -> Result<Vec<String>, std::io::Error> {
     let mut cgroup_list: Vec<String> = Vec::new();
     let mut cgroup_path = "/sys/fs/cgroup/memory";
     if cgroup_version == 2 {

@@ -20,9 +20,9 @@ async fn main() -> std::io::Result<()> {
         .parse::<u16>()
         .expect("PORT must be a valid number");
 
-    let cgroup_version: i8 = env::var("CGROUP_VERSION")
+    let cgroup_version: u8 = env::var("CGROUP_VERSION")
         .unwrap()
-        .parse::<i8>()
+        .parse::<u8>()
         .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
 
     let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
@@ -34,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(AppState {
-                cgroup_list:cgroup_list.clone(),
+                cgroup_list: cgroup_list.clone(),
                 cgroup_version,
             }))
             .configure(handler::config)
@@ -47,4 +47,3 @@ async fn main() -> std::io::Result<()> {
 
     server.await
 }
-

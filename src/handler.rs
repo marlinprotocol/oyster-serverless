@@ -1,16 +1,33 @@
 use crate::{
-    model::{AppState, RequestBody},
+    model::{AppState, RequestBody, SystemInfo},
     response::JsonResponse,
     serverless::*,
 };
 
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::time::Instant;
+use sysinfo::{System, SystemExt};
 use uuid::Uuid;
 use validator::Validate;
+
+#[get("/serverlessinfo")]
+async fn serverlessinfo() -> HttpResponse {
+    let mut system = System::new_all();
+    system.refresh_all();
+
+    let free_memory = system.available_memory();
+    let total_system_memory = system.total_memory();
+
+    let sys_info = SystemInfo {
+        free_memory,
+        total_system_memory,
+    };
+
+    HttpResponse::Ok().json(sys_info)
+}
 
 #[post("/serverless")]
 async fn serverless(
@@ -305,6 +322,8 @@ async fn serverless(
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api").service(serverless);
+    let scope = web::scope("/api")
+        .service(serverless)
+        .service(serverlessinfo);
     conf.service(scope);
 }
