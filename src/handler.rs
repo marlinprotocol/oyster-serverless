@@ -177,7 +177,7 @@ async fn serverless(
             message: "Server busy".to_string(),
             data: None,
         };
-
+        log::error!("No available cgroup to run workerd");
         delete_file(&js_file_path).expect("Error deleting JS file");
         delete_file(&capnp_file_path).expect("Error deleting configuration file");
 

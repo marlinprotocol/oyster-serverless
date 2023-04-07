@@ -1,15 +1,8 @@
 #!/bin/sh
-cgcreate -g memory:workerd1
-sudo cgset -r memory.max=100M workerd1
 
-cgcreate -g memory:workerd2
-sudo cgset -r memory.max=100M workerd2
-
-cgcreate -g memory:workerd3
-sudo cgset -r memory.max=100M workerd3
-
-cgcreate -g memory:workerd4
-sudo cgset -r memory.max=100M workerd4
-
-cgcreate -g memory:workerd5
-sudo cgset -r memory.max=100M workerd5
+for i in $(seq 1 20)
+do
+  cgcreate -g memory,cpu:workerd$i
+  echo "$cgroup_memory_size"M > /sys/fs/cgroup/workerd$i/memory.max
+  echo "100000 1000000" > /sys/fs/cgroup/workerd$i/cpu.max
+done

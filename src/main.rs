@@ -41,6 +41,7 @@ async fn main() -> std::io::Result<()> {
     })
     .bind(("0.0.0.0", port))
     .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
+    .workers(2)
     .run();
 
     log::info!("Server started on port {}", port);

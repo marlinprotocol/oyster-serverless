@@ -1,15 +1,9 @@
 #!/bin/sh
-cgcreate -g memory:workerd1
-echo 100M > /sys/fs/cgroup/memory/workerd1/memory.limit_in_bytes
 
-cgcreate -g memory:workerd2
-echo 100M > /sys/fs/cgroup/memory/workerd2/memory.limit_in_bytes
-
-cgcreate -g memory:workerd3
-echo 100M > /sys/fs/cgroup/memory/workerd3/memory.limit_in_bytes
-
-cgcreate -g memory:workerd4
-echo 100M > /sys/fs/cgroup/memory/workerd4/memory.limit_in_bytes
-
-cgcreate -g memory:workerd5
-echo 100M > /sys/fs/cgroup/memory/workerd5/memory.limit_in_bytes
+for i in $(seq 1 20)
+do
+  cgcreate -g memory,cpu:workerd$i
+  echo "$cgroup_memory_size"M > /sys/fs/cgroup/memory/workerd$i/memory.limit_in_bytes
+  echo "1000000" > /sys/fs/cgroup/cpu/workerd$i/cpu.cfs_period_us
+  echo "100000" > /sys/fs/cgroup/cpu/workerd$i/cpu.cfs_quota_us
+done
