@@ -53,62 +53,34 @@ async fn serverless(
 
     let fetch_timer_start = Instant::now();
 
-    //Fetching the transaction data using the transaction hash and decoding the calldata
-    let json_response = match get_transaction_data(tx_hash).await {
-        Ok(data) => data,
+    //Fetching the js code from the storage server
+    let js_code = match get_js_code(tx_hash).await {
+        Ok(data) => {
+            if data.status() != 200 {
+                let resp = JsonResponse {
+                    status: "error".to_string(),
+                    message: "Error fetching the JS code".to_string(),
+                    data: None,
+                };
+                return HttpResponse::InternalServerError().json(resp);
+            }
+            data.text().await.unwrap()
+        }
         Err(e) => {
+            log::error!("{}", e);
             let resp = JsonResponse {
                 status: "error".to_string(),
-                message: "Error fetching transacton data".to_string(),
+                message: "There was a problem while fetching the js code".to_string(),
                 data: None,
             };
-            log::error!("Error : {}", e);
             return HttpResponse::InternalServerError().json(resp);
         }
     };
-
-    let call_data = json_response["result"]["input"].to_string();
-    let contract_address = json_response["result"]["to"].to_string();
-
-    //Checking if the contract address is correct
-    if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02"
-                .to_string(),
-            data: None,
-        };
-        return HttpResponse::BadRequest().json(resp);
-    }
-
-    //Checking if the call data is null
-    if call_data == "null" {
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Error fetching the call data, make sure a valid tx_hash is provided"
-                .to_string(),
-            data: None,
-        };
-        return HttpResponse::BadRequest().json(resp);
-    }
 
     let fetch_timer_end = Instant::now();
     let fetch_time = fetch_timer_end.duration_since(fetch_timer_start);
 
     log::info!("Time taken to fetch data : {:?}", fetch_time);
-
-    let decoded_calldata = match decode_call_data(&call_data) {
-        Ok(data) => data,
-        Err(e) => {
-            log::error!("{}", e);
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Error decoding the call data".to_string(),
-                data: None,
-            };
-            return HttpResponse::InternalServerError().json(resp);
-        }
-    };
 
     let execution_timer_start = Instant::now();
 
@@ -117,7 +89,7 @@ async fn serverless(
     log::info!("Free port: {}", &free_port);
 
     //Generating the js and capnp file
-    let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
+    let js_file = create_js_file(&js_code, &file_name, &workerd_runtime_path).await;
 
     match js_file {
         Ok(_) => {
