@@ -110,6 +110,8 @@ async fn serverless(
         }
     };
 
+    let execution_timer_start = Instant::now();
+
     //Fetching a free port
     let free_port = get_free_port();
     log::info!("Free port: {}", &free_port);
@@ -269,6 +271,12 @@ async fn serverless(
         };
 
         log::info!("Generated response");
+        let execution_timer_end = Instant::now();
+        let execution_time = execution_timer_end
+            .duration_since(execution_timer_start)
+            .as_millis()
+            .to_string();
+        log::info!("Execution time: {}ms", execution_time);
         HttpResponse::Ok().json(resp)
     } else {
         let stderr = workerd_process.stderr.take().unwrap();
