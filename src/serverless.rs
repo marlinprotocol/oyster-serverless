@@ -78,12 +78,12 @@ pub async fn create_capnp_file(
     let capnp_data = format!(
         "using Workerd = import \"/workerd/workerd.capnp\";
 
-    const helloWorldExample :Workerd.Config = (
-      services = [ (name = \"main\", worker = .helloWorld) ],
+    const oysterServerlessConfig :Workerd.Config = (
+      services = [ (name = \"main\", worker = .oysterServerless) ],
       sockets = [ ( name = \"http\", address = \"*:{free_port}\", http = (), service = \"main\" ) ]
     );
     
-    const helloWorld :Workerd.Worker = (
+    const oysterServerless :Workerd.Worker = (
       serviceWorkerScript = embed \"{tx_hash}.js\",
       compatibilityDate = \"2022-09-16\",
     );"

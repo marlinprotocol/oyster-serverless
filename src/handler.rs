@@ -8,8 +8,10 @@ use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader};
+use std::time::Duration;
 use std::time::Instant;
 use sysinfo::{System, SystemExt};
+use tokio::time::timeout;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -222,9 +224,61 @@ async fn serverless(
     // Wait for the port to bind
     if wait_for_port(free_port) {
         //Fetching the workerd response
-        let workerd_response = get_workerd_response(free_port, jsonbody.input.as_ref().cloned())
-            .await
-            .unwrap();
+
+        let api_response_with_timeout = timeout(
+            Duration::from_secs(30),
+            get_workerd_response(free_port, jsonbody.input.as_ref().cloned()),
+        )
+        .await;
+
+        let workerd_response_with_timeoutcheck = match api_response_with_timeout {
+            Ok(response) => response,
+            Err(err) => {
+                log::error!("workerd response error: {}", err);
+                delete_file(&js_file_path).expect("Error deleting JS file");
+                delete_file(&capnp_file_path).expect("Error deleting configuration file");
+                let resp = JsonResponse {
+                    status: "error".to_string(),
+                    message: "Server timeout, fetching response took a long time".to_string(),
+                    data: None,
+                };
+                let kill_workerd_process = workerd_process.kill();
+                match kill_workerd_process {
+                    Ok(_) => {
+                        log::info!("Workerd process {} terminated.", workerd_process.id())
+                    }
+                    Err(_) => {
+                        log::error!("Error terminating the process : {}", workerd_process.id())
+                    }
+                }
+                log::error!("Failed to fetch response from workerd in 10sec");
+                return HttpResponse::RequestTimeout().json(resp);
+            }
+        };
+
+        let workerd_response = match workerd_response_with_timeoutcheck {
+            Ok(res) => res,
+            Err(err) => {
+                log::error!("workerd response error: {}", err);
+                delete_file(&js_file_path).expect("Error deleting JS file");
+                delete_file(&capnp_file_path).expect("Error deleting configuration file");
+                let resp = JsonResponse {
+                    status: "error".to_string(),
+                    message: "Failed to generate the response".to_string(),
+                    data: None,
+                };
+                let kill_workerd_process = workerd_process.kill();
+                match kill_workerd_process {
+                    Ok(_) => {
+                        log::info!("Workerd process {} terminated.", workerd_process.id())
+                    }
+                    Err(_) => {
+                        log::error!("Error terminating the process : {}", workerd_process.id())
+                    }
+                }
+                return HttpResponse::InternalServerError().json(resp);
+            }
+        };
 
         if workerd_response.status() != reqwest::StatusCode::OK {
             delete_file(&js_file_path).expect("Error deleting JS file");

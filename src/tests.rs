@@ -243,4 +243,42 @@ pub mod serverlesstest {
 
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
+
+    #[actix_web::test]
+    async fn response_timeout_test() {
+        dotenv().ok();
+        let cgroup_version: u8 = env::var("CGROUP_VERSION")
+            .unwrap()
+            .parse::<u8>()
+            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+
+        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        if cgroup_list.is_empty() {
+            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+            std::process::exit(1);
+        }
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroup_list: cgroup_list.clone(),
+                    cgroup_version,
+                }))
+                .configure(handler::config),
+        )
+        .await;
+
+        let invalid_payload = json!({
+            "tx_hash": "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303"
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/api/serverless")
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::REQUEST_TIMEOUT);
+    }
 }
