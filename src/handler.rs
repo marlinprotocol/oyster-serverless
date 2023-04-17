@@ -251,7 +251,7 @@ async fn serverless(
                         log::error!("Error terminating the process : {}", workerd_process.id())
                     }
                 }
-                log::error!("Failed to fetch response from workerd in 10sec");
+                log::error!("Failed to fetch response from workerd in 30sec");
                 return HttpResponse::RequestTimeout().json(resp);
             }
         };
