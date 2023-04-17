@@ -190,9 +190,9 @@ pub mod serverlesstest {
         .await;
 
         let invalid_payload = json!({
-            "tx_hash": "0x898ebb6887cba44eb53601af2ace75ef1bfadc78ebfeb55ced33d9b83f8d8d4e",
+            "tx_hash": "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f",
             "input": {
-                "num": 10
+                "num": 100
             }
         });
 
@@ -203,7 +203,7 @@ pub mod serverlesstest {
 
         let resp = test::call_service(&app, req).await;
 
-        assert_eq!(resp.status(), http::StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
     }
 
     #[actix_web::test]
