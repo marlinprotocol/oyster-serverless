@@ -127,6 +127,7 @@ pub async fn run_workerd_runtime(
         .arg(workerd_runtime_path.to_string() + "workerd")
         .arg("serve")
         .arg(workerd_runtime_path.to_string() + file_name + ".capnp")
+        .arg("--verbose")
         .stderr(Stdio::piped())
         .spawn()?;
     Ok(child)

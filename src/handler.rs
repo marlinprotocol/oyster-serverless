@@ -340,16 +340,25 @@ async fn serverless(
         let stderr_output = stderr_lines.join("\n");
 
         if !stderr_output.is_empty() {
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message:
-                    "Failed to generate a response. Please ensure that you provide valid JS code"
-                        .to_string(),
-                data: Some(Value::String(stderr_output)),
-            };
-
+            log::error!("Workerd execution error : {}", stderr_output);
             delete_file(&js_file_path).expect("Error deleting JS file");
             delete_file(&capnp_file_path).expect("Error deleting configuration file");
+
+            if stderr_output.contains("SyntaxError") {
+                let resp = JsonResponse {
+                    status: "error".to_string(),
+                    message:String::from("Failed to generate a response. Syntax error in your JavaScript code. Please check the syntax and try again."),
+                    data: Some(Value::String("SyntaxError".to_string()))
+                };
+
+                return HttpResponse::BadRequest().json(resp);
+            }
+
+            let resp = JsonResponse {
+                status: "error".to_string(),
+                message: String::from("Failed to generate a response."),
+                data: None,
+            };
             return HttpResponse::InternalServerError().json(resp);
         }
 
@@ -361,7 +370,7 @@ async fn serverless(
                 if error_status == "signal: 9 (SIGKILL)" {
                     let resp = JsonResponse {
                         status: "error".to_string(),
-                        message: "Workerd ran out of memory".to_string(),
+                        message: "The execution of the code has run out of memory.".to_string(),
                         data: None,
                     };
                     return HttpResponse::InternalServerError().json(resp);
@@ -375,8 +384,7 @@ async fn serverless(
 
         let resp = JsonResponse {
             status: "error".to_string(),
-            message: "Failed to generate a response. Please ensure that you provide valid JS code."
-                .to_string(),
+            message: "Failed to generate a response.".to_string(),
             data: None,
         };
         HttpResponse::InternalServerError().json(resp)
