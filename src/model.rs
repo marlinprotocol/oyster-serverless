@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use validator::Validate;
 
@@ -12,10 +12,4 @@ pub struct RequestBody {
 pub struct AppState {
     pub cgroup_list: Vec<String>,
     pub cgroup_version: u8,
-}
-
-#[derive(Serialize)]
-pub struct SystemInfo {
-    pub free_memory: u64,
-    pub total_system_memory: u64,
 }

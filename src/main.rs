@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
 
     let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
     if cgroup_list.is_empty() {
-        log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
+        log::error!("No cgroups found. Make sure you have generated cgroups on your system by following the instructions in the readme file.");
         std::process::exit(1);
     }
 

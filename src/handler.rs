@@ -1,35 +1,18 @@
 use crate::{
-    model::{AppState, RequestBody, SystemInfo},
+    model::{AppState, RequestBody},
     response::JsonResponse,
     serverless::*,
 };
 
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use std::time::Instant;
-use sysinfo::{System, SystemExt};
 use tokio::time::timeout;
 use uuid::Uuid;
 use validator::Validate;
-
-#[get("/serverlessinfo")]
-async fn serverlessinfo() -> HttpResponse {
-    let mut system = System::new_all();
-    system.refresh_all();
-
-    let free_memory = system.available_memory();
-    let total_system_memory = system.total_memory();
-
-    let sys_info = SystemInfo {
-        free_memory,
-        total_system_memory,
-    };
-
-    HttpResponse::Ok().json(sys_info)
-}
 
 #[post("/serverless")]
 async fn serverless(
@@ -51,9 +34,8 @@ async fn serverless(
     let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
 
+    //Creating a unique file name for the output file
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
-
-    let fetch_timer_start = Instant::now();
 
     //Fetching the transaction data using the transaction hash and decoding the calldata
     let json_response = match get_transaction_data(tx_hash).await {
@@ -94,10 +76,7 @@ async fn serverless(
         return HttpResponse::BadRequest().json(resp);
     }
 
-    let fetch_timer_end = Instant::now();
-    let fetch_time = fetch_timer_end.duration_since(fetch_timer_start);
-
-    log::info!("Time taken to fetch data : {:?}", fetch_time);
+    let execution_timer_start = Instant::now();
 
     let decoded_calldata = match decode_call_data(&call_data) {
         Ok(data) => data,
@@ -111,8 +90,6 @@ async fn serverless(
             return HttpResponse::InternalServerError().json(resp);
         }
     };
-
-    let execution_timer_start = Instant::now();
 
     //Fetching a free port
     let free_port = get_free_port();
@@ -162,62 +139,42 @@ async fn serverless(
         Ok(cgroup) => cgroup,
         Err(e) => {
             log::error!("{}", e);
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "There was an error assigning resources to your function".to_string(),
-                data: None,
-            };
-
-            delete_file(&js_file_path).expect("Error deleting JS file");
-            delete_file(&capnp_file_path).expect("Error deleting configuration file");
-
-            return HttpResponse::InternalServerError().json(resp);
+            return internal_server_error_response(
+                &capnp_file_path,
+                &js_file_path,
+                "There was an error assigning resources to your function",
+            );
         }
     };
 
     if available_cgroup == "No available cgroup" {
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Server busy".to_string(),
-            data: None,
-        };
         log::error!("No available cgroup to run workerd");
-        delete_file(&js_file_path).expect("Error deleting JS file");
-        delete_file(&capnp_file_path).expect("Error deleting configuration file");
-
-        return HttpResponse::InternalServerError().json(resp);
+        return internal_server_error_response(&capnp_file_path, &js_file_path, "Server busy");
     }
 
     //Run the workerd runtime with generated files
 
-    let workerd_execution_start = Instant::now();
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
 
     if workerd.is_err() {
-        delete_file(&js_file_path).expect("Error deleting JS file");
-        delete_file(&capnp_file_path).expect("Error deleting configuration file");
         let workerd_error = workerd.err();
         log::error!("Error running the workerd runtime: {:?}", workerd_error);
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Error running the workerd runtime".to_string(),
-            data: None,
-        };
-        return HttpResponse::InternalServerError().json(resp);
+        return internal_server_error_response(
+            &capnp_file_path,
+            &js_file_path,
+            "Error running the workerd runtime",
+        );
     }
 
     let mut workerd_process = match workerd {
         Ok(data) => data,
         Err(e) => {
             log::error!("{}", e);
-            delete_file(&js_file_path).expect("Error deleting JS file");
-            delete_file(&capnp_file_path).expect("Error deleting configuration file");
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Failed to execute the code".to_string(),
-                data: None,
-            };
-            return HttpResponse::InternalServerError().json(resp);
+            return internal_server_error_response(
+                &capnp_file_path,
+                &js_file_path,
+                "Failed to execute the code",
+            );
         }
     };
 
@@ -235,23 +192,13 @@ async fn serverless(
             Ok(response) => response,
             Err(err) => {
                 log::error!("workerd response error: {}", err);
-                delete_file(&js_file_path).expect("Error deleting JS file");
-                delete_file(&capnp_file_path).expect("Error deleting configuration file");
-                let resp = JsonResponse {
-                    status: "error".to_string(),
-                    message: "Server timeout, fetching response took a long time".to_string(),
-                    data: None,
-                };
-                let kill_workerd_process = workerd_process.kill();
-                match kill_workerd_process {
-                    Ok(_) => {
-                        log::info!("Workerd process {} terminated.", workerd_process.id())
-                    }
-                    Err(_) => {
-                        log::error!("Error terminating the process : {}", workerd_process.id())
-                    }
-                }
                 log::error!("Failed to fetch response from workerd in 30sec");
+                let resp = handle_workerd_error(
+                    &capnp_file_path,
+                    &js_file_path,
+                    &mut workerd_process,
+                    "Server timeout, fetching response took a long time",
+                );
                 return HttpResponse::RequestTimeout().json(resp);
             }
         };
@@ -260,34 +207,23 @@ async fn serverless(
             Ok(res) => res,
             Err(err) => {
                 log::error!("workerd response error: {}", err);
-                delete_file(&js_file_path).expect("Error deleting JS file");
-                delete_file(&capnp_file_path).expect("Error deleting configuration file");
-                let resp = JsonResponse {
-                    status: "error".to_string(),
-                    message: "Failed to generate the response".to_string(),
-                    data: None,
-                };
-                let kill_workerd_process = workerd_process.kill();
-                match kill_workerd_process {
-                    Ok(_) => {
-                        log::info!("Workerd process {} terminated.", workerd_process.id())
-                    }
-                    Err(_) => {
-                        log::error!("Error terminating the process : {}", workerd_process.id())
-                    }
-                }
+                let resp = handle_workerd_error(
+                    &capnp_file_path,
+                    &js_file_path,
+                    &mut workerd_process,
+                    "Failed to generate the response",
+                );
                 return HttpResponse::InternalServerError().json(resp);
             }
         };
 
         if workerd_response.status() != reqwest::StatusCode::OK {
-            delete_file(&js_file_path).expect("Error deleting JS file");
-            delete_file(&capnp_file_path).expect("Error deleting configuration file");
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code.".to_string(),
-                data: None,
-            };
+            let resp = handle_workerd_error(
+                &capnp_file_path,
+                &js_file_path,
+                &mut workerd_process,
+                "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code."
+            );
             return HttpResponse::InternalServerError().json(resp);
         }
 
@@ -295,14 +231,6 @@ async fn serverless(
 
         //Terminating the workerd process once the response is fetched
         let kill_workerd_process = workerd_process.kill();
-
-        //Fetching the workerd execution duration
-        let workerd_execution_end = Instant::now();
-        let workerd_execution_duration = workerd_execution_end
-            .duration_since(workerd_execution_start)
-            .as_millis()
-            .to_string();
-        log::info!("Workerd execution time: {}ms", workerd_execution_duration);
 
         match kill_workerd_process {
             Ok(_) => {
@@ -315,8 +243,8 @@ async fn serverless(
 
         //Delete the generated file once the response is generated
 
-        let _deleted_js_file = delete_file(&js_file_path);
-        let _deleted_capnp_file = delete_file(&capnp_file_path);
+        delete_file(&js_file_path).expect("Error deleting JS file");
+        delete_file(&capnp_file_path).expect("Error deleting configuration file");
 
         let resp = JsonResponse {
             status: "success".to_string(),
@@ -341,25 +269,23 @@ async fn serverless(
 
         if !stderr_output.is_empty() {
             log::error!("Workerd execution error : {}", stderr_output);
-            delete_file(&js_file_path).expect("Error deleting JS file");
-            delete_file(&capnp_file_path).expect("Error deleting configuration file");
 
             if stderr_output.contains("SyntaxError") {
+                delete_file(&js_file_path).expect("Error deleting JS file");
+                delete_file(&capnp_file_path).expect("Error deleting configuration file");
                 let resp = JsonResponse {
                     status: "error".to_string(),
                     message:String::from("Failed to generate a response. Syntax error in your JavaScript code. Please check the syntax and try again."),
-                    data: Some(Value::String("SyntaxError".to_string()))
+                    data: Some(Value::String(stderr_output))
                 };
-
                 return HttpResponse::BadRequest().json(resp);
             }
 
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: String::from("Failed to generate a response."),
-                data: None,
-            };
-            return HttpResponse::InternalServerError().json(resp);
+            return internal_server_error_response(
+                &capnp_file_path,
+                &js_file_path,
+                "Failed to generate a response.",
+            );
         }
 
         let workerd_status = workerd_process.try_wait();
@@ -368,32 +294,25 @@ async fn serverless(
                 let error_status = status.unwrap().to_string();
                 log::error!("Workerd execution error : {}", error_status);
                 if error_status == "signal: 9 (SIGKILL)" {
-                    let resp = JsonResponse {
-                        status: "error".to_string(),
-                        message: "The execution of the code has run out of memory.".to_string(),
-                        data: None,
-                    };
-                    return HttpResponse::InternalServerError().json(resp);
+                    return internal_server_error_response(
+                        &capnp_file_path,
+                        &js_file_path,
+                        "The execution of the code has run out of memory.",
+                    );
                 }
             }
             Err(err) => panic!("Error fetching workerd exit status : {}", err),
         }
 
-        delete_file(&js_file_path).expect("Error deleting JS file");
-        delete_file(&capnp_file_path).expect("Error deleting configuration file");
-
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Failed to generate a response.".to_string(),
-            data: None,
-        };
-        HttpResponse::InternalServerError().json(resp)
+        internal_server_error_response(
+            &capnp_file_path,
+            &js_file_path,
+            "Failed to generate a response.",
+        )
     }
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api")
-        .service(serverless)
-        .service(serverlessinfo);
+    let scope = web::scope("/api").service(serverless);
     conf.service(scope);
 }
