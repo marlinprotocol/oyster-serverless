@@ -1,10 +1,11 @@
 use crate::{
     model::{AppState, RequestBody},
-    response::JsonResponse,
+    response::response,
     serverless::*,
 };
 
-use actix_web::{post, web, HttpResponse, Responder};
+use actix_web::http::StatusCode;
+use actix_web::{post, web, Responder};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader};
@@ -23,12 +24,14 @@ async fn serverless(
     // Validation for the request json body
     if let Err(err) = jsonbody.validate() {
         log::error!("{}", err);
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Invalid payload".to_string(),
-            data: Some(Value::String(err.to_string())),
-        };
-        return HttpResponse::BadRequest().json(resp);
+        return response(
+            None,
+            None,
+            None,
+            Some(Value::String(err.to_string())),
+            "Invalid payload",
+            StatusCode::BAD_REQUEST,
+        );
     }
 
     let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
@@ -41,13 +44,15 @@ async fn serverless(
     let json_response = match get_transaction_data(tx_hash).await {
         Ok(data) => data,
         Err(e) => {
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Error fetching transacton data".to_string(),
-                data: None,
-            };
             log::error!("Error : {}", e);
-            return HttpResponse::InternalServerError().json(resp);
+            return response(
+                None,
+                None,
+                None,
+                None,
+                "Error fetching transacton data",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
 
@@ -56,24 +61,26 @@ async fn serverless(
 
     //Checking if the contract address is correct
     if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02"
-                .to_string(),
-            data: None,
-        };
-        return HttpResponse::BadRequest().json(resp);
+        return response(
+            None,
+            None,
+            None,
+            None,
+            "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02",
+            StatusCode::BAD_REQUEST,
+        );
     }
 
     //Checking if the call data is null
     if call_data == "null" {
-        let resp = JsonResponse {
-            status: "error".to_string(),
-            message: "Error fetching the call data, make sure a valid tx_hash is provided"
-                .to_string(),
-            data: None,
-        };
-        return HttpResponse::BadRequest().json(resp);
+        return response(
+            None,
+            None,
+            None,
+            None,
+            "Error fetching the call data, make sure a valid tx_hash is provided",
+            StatusCode::BAD_REQUEST,
+        );
     }
 
     let execution_timer_start = Instant::now();
@@ -82,12 +89,14 @@ async fn serverless(
         Ok(data) => data,
         Err(e) => {
             log::error!("{}", e);
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Error decoding the call data".to_string(),
-                data: None,
-            };
-            return HttpResponse::InternalServerError().json(resp);
+            return response(
+                None,
+                None,
+                None,
+                None,
+                "Error decoding the call data",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
 
@@ -103,13 +112,15 @@ async fn serverless(
             log::info!("JS file generated.")
         }
         Err(e) => {
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Error generating the JS file".to_string(),
-                data: None,
-            };
             log::error!("Error : {}", e);
-            return HttpResponse::InternalServerError().json(resp);
+            return response(
+                None,
+                None,
+                None,
+                None,
+                "Error generating the JS file",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     };
 
@@ -120,13 +131,15 @@ async fn serverless(
             log::info!("Config file generated.")
         }
         Err(e) => {
-            let resp = JsonResponse {
-                status: "error".to_string(),
-                message: "Error generating the configuration file".to_string(),
-                data: None,
-            };
             log::error!("Error : {}", e);
-            return HttpResponse::InternalServerError().json(resp);
+            return response(
+                None,
+                None,
+                None,
+                None,
+                "Error generating the configuration file.",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
@@ -139,17 +152,27 @@ async fn serverless(
         Ok(cgroup) => cgroup,
         Err(e) => {
             log::error!("{}", e);
-            return internal_server_error_response(
-                &capnp_file_path,
-                &js_file_path,
+            return response(
+                Some(&capnp_file_path),
+                Some(&js_file_path),
+                None,
+                None,
                 "There was an error assigning resources to your function",
+                StatusCode::INTERNAL_SERVER_ERROR,
             );
         }
     };
 
     if available_cgroup == "No available cgroup" {
         log::error!("No available cgroup to run workerd");
-        return internal_server_error_response(&capnp_file_path, &js_file_path, "Server busy");
+        return response(
+            Some(&capnp_file_path),
+            Some(&js_file_path),
+            None,
+            None,
+            "Server busy",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        );
     }
 
     //Run the workerd runtime with generated files
@@ -159,10 +182,13 @@ async fn serverless(
     if workerd.is_err() {
         let workerd_error = workerd.err();
         log::error!("Error running the workerd runtime: {:?}", workerd_error);
-        return internal_server_error_response(
-            &capnp_file_path,
-            &js_file_path,
+        return response(
+            Some(&capnp_file_path),
+            Some(&js_file_path),
+            None,
+            None,
             "Error running the workerd runtime",
+            StatusCode::INTERNAL_SERVER_ERROR,
         );
     }
 
@@ -170,10 +196,13 @@ async fn serverless(
         Ok(data) => data,
         Err(e) => {
             log::error!("{}", e);
-            return internal_server_error_response(
-                &capnp_file_path,
-                &js_file_path,
+            return response(
+                Some(&capnp_file_path),
+                Some(&js_file_path),
+                None,
+                None,
                 "Failed to execute the code",
+                StatusCode::INTERNAL_SERVER_ERROR,
             );
         }
     };
@@ -193,13 +222,14 @@ async fn serverless(
             Err(err) => {
                 log::error!("workerd response error: {}", err);
                 log::error!("Failed to fetch response from workerd in 30sec");
-                let resp = handle_workerd_error(
-                    &capnp_file_path,
-                    &js_file_path,
-                    &mut workerd_process,
+                return response(
+                    Some(&capnp_file_path),
+                    Some(&js_file_path),
+                    Some(workerd_process),
+                    None,
                     "Server timeout, fetching response took a long time",
+                    StatusCode::REQUEST_TIMEOUT,
                 );
-                return HttpResponse::RequestTimeout().json(resp);
             }
         };
 
@@ -207,50 +237,29 @@ async fn serverless(
             Ok(res) => res,
             Err(err) => {
                 log::error!("workerd response error: {}", err);
-                let resp = handle_workerd_error(
-                    &capnp_file_path,
-                    &js_file_path,
-                    &mut workerd_process,
+                return response(
+                    Some(&capnp_file_path),
+                    Some(&js_file_path),
+                    Some(workerd_process),
+                    None,
                     "Failed to generate the response",
+                    StatusCode::INTERNAL_SERVER_ERROR,
                 );
-                return HttpResponse::InternalServerError().json(resp);
             }
         };
 
         if workerd_response.status() != reqwest::StatusCode::OK {
-            let resp = handle_workerd_error(
-                &capnp_file_path,
-                &js_file_path,
-                &mut workerd_process,
-                "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code."
+            return response(
+                Some(&capnp_file_path),
+                Some(&js_file_path),
+                Some(workerd_process),
+                None,
+                "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code.",
+                StatusCode::INTERNAL_SERVER_ERROR,
             );
-            return HttpResponse::InternalServerError().json(resp);
         }
 
         let workerd_json_response = workerd_response.text().await.unwrap();
-
-        //Terminating the workerd process once the response is fetched
-        let kill_workerd_process = workerd_process.kill();
-
-        match kill_workerd_process {
-            Ok(_) => {
-                log::info!("Workerd process {} terminated.", workerd_process.id())
-            }
-            Err(_) => {
-                log::error!("Error terminating the process : {}", workerd_process.id())
-            }
-        }
-
-        //Delete the generated file once the response is generated
-
-        delete_file(&js_file_path).expect("Error deleting JS file");
-        delete_file(&capnp_file_path).expect("Error deleting configuration file");
-
-        let resp = JsonResponse {
-            status: "success".to_string(),
-            message: "Response successfully generated".to_string(),
-            data: Some(Value::String(workerd_json_response)),
-        };
 
         log::info!("Generated response");
         let execution_timer_end = Instant::now();
@@ -259,7 +268,15 @@ async fn serverless(
             .as_millis()
             .to_string();
         log::info!("Execution time: {}ms", execution_time);
-        HttpResponse::Ok().json(resp)
+
+        response(
+            Some(&capnp_file_path),
+            Some(&js_file_path),
+            Some(workerd_process),
+            Some(Value::String(workerd_json_response)),
+            "Response successfully generated",
+            StatusCode::OK,
+        )
     } else {
         let stderr = workerd_process.stderr.take().unwrap();
         let reader = BufReader::new(stderr);
@@ -271,20 +288,23 @@ async fn serverless(
             log::error!("Workerd execution error : {}", stderr_output);
 
             if stderr_output.contains("SyntaxError") {
-                delete_file(&js_file_path).expect("Error deleting JS file");
-                delete_file(&capnp_file_path).expect("Error deleting configuration file");
-                let resp = JsonResponse {
-                    status: "error".to_string(),
-                    message:String::from("Failed to generate a response. Syntax error in your JavaScript code. Please check the syntax and try again."),
-                    data: Some(Value::String(stderr_output))
-                };
-                return HttpResponse::BadRequest().json(resp);
+                return response(
+                    Some(&capnp_file_path),
+                    Some(&js_file_path),
+                    None,
+                    Some(Value::String(stderr_output)),
+                    "Failed to generate a response. Syntax error in your JavaScript code. Please check the syntax and try again.",
+                    StatusCode::BAD_REQUEST,
+                );
             }
 
-            return internal_server_error_response(
-                &capnp_file_path,
-                &js_file_path,
+            return response(
+                Some(&capnp_file_path),
+                Some(&js_file_path),
+                None,
+                None,
                 "Failed to generate a response.",
+                StatusCode::INTERNAL_SERVER_ERROR,
             );
         }
 
@@ -294,20 +314,26 @@ async fn serverless(
                 let error_status = status.unwrap().to_string();
                 log::error!("Workerd execution error : {}", error_status);
                 if error_status == "signal: 9 (SIGKILL)" {
-                    return internal_server_error_response(
-                        &capnp_file_path,
-                        &js_file_path,
+                    return response(
+                        Some(&capnp_file_path),
+                        Some(&js_file_path),
+                        None,
+                        None,
                         "The execution of the code has run out of memory.",
+                        StatusCode::INTERNAL_SERVER_ERROR,
                     );
                 }
             }
-            Err(err) => panic!("Error fetching workerd exit status : {}", err),
+            Err(err) => log::error!("Error fetching workerd exit status : {}", err),
         }
 
-        internal_server_error_response(
-            &capnp_file_path,
-            &js_file_path,
+        response(
+            Some(&capnp_file_path),
+            Some(&js_file_path),
+            None,
+            None,
             "Failed to generate a response.",
+            StatusCode::INTERNAL_SERVER_ERROR,
         )
     }
 }

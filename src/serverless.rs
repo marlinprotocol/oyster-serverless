@@ -1,4 +1,3 @@
-use actix_web::HttpResponse;
 use ethers::abi::decode;
 use ethers::abi::ParamType;
 use ethers::core::utils::hex::decode as hex_decode;
@@ -16,8 +15,6 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-
-use crate::response::JsonResponse;
 
 //Fetching the calldata using the txhash provided by the user
 pub async fn get_transaction_data(_tx_hash: &str) -> Result<Value, Error> {
@@ -193,50 +190,4 @@ pub fn get_cgroup_list(cgroup_version: u8) -> Result<Vec<String>, std::io::Error
     }
 
     Ok(cgroup_list)
-}
-
-//Handle workerd error and other cleanup
-pub fn handle_workerd_error(
-    capnp_file_path: &str,
-    js_file_path: &str,
-    workerd_process: &mut std::process::Child,
-    error_message: &str,
-) -> JsonResponse {
-    delete_file(js_file_path).expect("Error deleting JS file");
-    delete_file(capnp_file_path).expect("Error deleting configuration file");
-
-    let resp = JsonResponse {
-        status: "error".to_string(),
-        message: error_message.to_string(),
-        data: None,
-    };
-
-    let kill_workerd_process = workerd_process.kill();
-    match kill_workerd_process {
-        Ok(_) => {
-            log::info!("Workerd process {} terminated.", workerd_process.id())
-        }
-        Err(_) => {
-            log::error!("Error terminating the process : {}", workerd_process.id())
-        }
-    }
-
-    resp
-}
-
-pub fn internal_server_error_response(
-    capnp_file_path: &str,
-    js_file_path: &str,
-    error_message: &str,
-) -> HttpResponse {
-    delete_file(js_file_path).expect("Error deleting JS file");
-    delete_file(capnp_file_path).expect("Error deleting configuration file");
-
-    let resp = JsonResponse {
-        status: "error".to_string(),
-        message: error_message.to_string(),
-        data: None,
-    };
-
-    HttpResponse::InternalServerError().json(resp)
 }
