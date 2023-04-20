@@ -1,9 +1,8 @@
-use ethers::abi::decode;
-use ethers::abi::ParamType;
-use ethers::core::utils::hex::decode as hex_decode;
 use reqwest::Response;
-use reqwest::{Client, Error};
-use serde_json::{json, Value};
+use reqwest::header::HeaderMap;
+use reqwest::header::HeaderValue;
+use reqwest::{Error};
+use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::remove_file;
@@ -15,42 +14,6 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-
-//Fetching the calldata using the txhash provided by the user
-pub async fn get_transaction_data(_tx_hash: &str) -> Result<Value, Error> {
-    let client = Client::new();
-    let url = "https://goerli-rollup.arbitrum.io/rpc";
-    let method = "eth_getTransactionByHash";
-    let params = json!([&_tx_hash]);
-    let id = 1;
-
-    let request = json!({
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params,
-        "id": id,
-    });
-
-    let response = client.post(url).json(&request).send().await?;
-    let json_response = response.json::<Value>().await?;
-
-    Ok(json_response)
-}
-
-//Decoding calldata using ethers
-pub fn decode_call_data(json_data: &str) -> Result<String, Box<dyn std::error::Error>> {
-    //Remove the first 11 characters and last 1 character from the string
-    let json_response_size = json_data.len();
-    let call_data = &json_data[11..json_response_size - 1];
-    //Convert hex string to byte array
-    let vec1 = hex_decode(call_data).unwrap();
-    let data: &[u8] = vec1.as_slice();
-    //Decode the byte array using ethers
-    let result = decode(vec![ParamType::String].as_slice(), data).unwrap();
-    //Convert the decoded calldata to string
-    let decoded_calldata = result[0].to_string();
-    Ok(decoded_calldata)
-}
 
 //Get a free port for running workerd
 pub fn get_free_port() -> u16 {
@@ -197,5 +160,25 @@ pub async fn get_attestation_doc() -> Result<Response, Box<dyn std::error::Error
     let req_url = "http://127.0.0.1:1300".to_string();
     let client = reqwest::Client::new();
     let response = client.get(req_url).send().await?;
+    Ok(response)
+}
+
+//Fetching js code from the storage server
+pub async fn get_code_from_storage_server(attestation_doc:&str,id:&str) -> Result<Response, Box<dyn std::error::Error>> {
+    let client = reqwest::Client::new();
+    let url = "http://example.com/load";
+    let body = json!({
+        "key": id
+    });
+
+    let mut headers = HeaderMap::new();
+    headers.insert("Attestation", HeaderValue::from_str(attestation_doc)?);
+
+    let response = client.post(url)
+        .headers(headers)
+        .json(&body)
+        .send()
+        .await?;
+
     Ok(response)
 }

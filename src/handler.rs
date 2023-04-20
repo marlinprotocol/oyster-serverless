@@ -35,12 +35,12 @@ async fn serverless(
     }
 
     let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
-    let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
+    let code_id = jsonbody.code_id.as_ref().unwrap();
 
     //Creating a unique file name for the output file
-    let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
+    let file_name = code_id.to_string() + &Uuid::new_v4().to_string();
 
-    //Fetching the js code from the storage server
+    //Fetching attestation document
     let attestation_document = match get_attestation_doc().await {
         Ok(attestation_doc) => attestation_doc.text().await.unwrap(),
         Err(e) => {
@@ -56,55 +56,9 @@ async fn serverless(
         }
     };
 
-    println!("Attestation document : {:?}", attestation_document);
-
-    //Fetching the transaction data using the transaction hash and decoding the calldata
-    let json_response = match get_transaction_data(tx_hash).await {
-        Ok(data) => data,
-        Err(e) => {
-            log::error!("Error : {}", e);
-            return response(
-                None,
-                None,
-                None,
-                None,
-                "Error fetching transacton data",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-
-    let call_data = json_response["result"]["input"].to_string();
-    let contract_address = json_response["result"]["to"].to_string();
-
-    //Checking if the contract address is correct
-    if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
-        return response(
-            None,
-            None,
-            None,
-            None,
-            "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02",
-            StatusCode::BAD_REQUEST,
-        );
-    }
-
-    //Checking if the call data is null
-    if call_data == "null" {
-        return response(
-            None,
-            None,
-            None,
-            None,
-            "Error fetching the call data, make sure a valid tx_hash is provided",
-            StatusCode::BAD_REQUEST,
-        );
-    }
-
-    let execution_timer_start = Instant::now();
-
-    let decoded_calldata = match decode_call_data(&call_data) {
-        Ok(data) => data,
+    //Fetching the js code from the storage server
+    let js_code = match get_code_from_storage_server(&attestation_document,code_id).await {
+        Ok(code) => code.text().await.unwrap(),
         Err(e) => {
             log::error!("{}", e);
             return response(
@@ -112,18 +66,22 @@ async fn serverless(
                 None,
                 None,
                 None,
-                "Error decoding the call data",
+                "There was a problem in fetching the code from the storage server",
                 StatusCode::INTERNAL_SERVER_ERROR,
             );
         }
     };
+
+    println!("Attestation document : {:?}", attestation_document);
+
+    let execution_timer_start = Instant::now();
 
     //Fetching a free port
     let free_port = get_free_port();
     log::info!("Free port: {}", &free_port);
 
     //Generating the js and capnp file
-    let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
+    let js_file = create_js_file(&js_code, &file_name, &workerd_runtime_path).await;
 
     match js_file {
         Ok(_) => {
