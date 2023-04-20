@@ -9,6 +9,7 @@ Oyster Serverless is a cutting-edge, high-performance serverless computing platf
 <b>Install the following packages : </b>
 
 * build-essential 
+* musl-tools
 * libc++1
 
 `Note : Oyster serverless only works on Ubuntu 22.04 and newer versions due to limitations in the workerd dependency.`
