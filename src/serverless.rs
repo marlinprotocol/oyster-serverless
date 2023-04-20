@@ -191,3 +191,11 @@ pub fn get_cgroup_list(cgroup_version: u8) -> Result<Vec<String>, std::io::Error
 
     Ok(cgroup_list)
 }
+
+//Fetch the js code from the storage server
+pub async fn get_attestation_doc() -> Result<Response, Box<dyn std::error::Error>> {
+    let req_url = "http://127.0.0.1:1300".to_string();
+    let client = reqwest::Client::new();
+    let response = client.get(req_url).send().await?;
+    Ok(response)
+}

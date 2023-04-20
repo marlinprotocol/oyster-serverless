@@ -40,6 +40,24 @@ async fn serverless(
     //Creating a unique file name for the output file
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
 
+    //Fetching the js code from the storage server
+    let attestation_document = match get_attestation_doc().await {
+        Ok(attestation_doc) => attestation_doc.text().await.unwrap(),
+        Err(e) => {
+            log::error!("{}", e);
+            return response(
+                None,
+                None,
+                None,
+                None,
+                "There was a problem in generating the attestation document",
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
+        }
+    };
+
+    println!("Attestation document : {:?}", attestation_document);
+
     //Fetching the transaction data using the transaction hash and decoding the calldata
     let json_response = match get_transaction_data(tx_hash).await {
         Ok(data) => data,
