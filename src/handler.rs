@@ -14,6 +14,7 @@ use std::time::Instant;
 use tokio::time::timeout;
 use uuid::Uuid;
 use validator::Validate;
+use base64;
 
 #[post("/serverless")]
 async fn serverless(
@@ -56,8 +57,11 @@ async fn serverless(
         }
     };
 
+    //encode the attestation doc into base64
+    let base64_encoded_attestation_doc = base64::encode(&attestation_document);
+
     //Fetching the js code from the storage server
-    let js_code = match get_code_from_storage_server(&attestation_document,code_id).await {
+    let js_code = match get_code_from_storage_server(&base64_encoded_attestation_doc,code_id).await {
         Ok(code) => code.text().await.unwrap(),
         Err(e) => {
             log::error!("{}", e);
@@ -72,7 +76,6 @@ async fn serverless(
         }
     };
 
-    println!("Attestation document : {:?}", attestation_document);
 
     let execution_timer_start = Instant::now();
 

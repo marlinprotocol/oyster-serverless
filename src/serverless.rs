@@ -166,7 +166,7 @@ pub async fn get_attestation_doc() -> Result<Response, Box<dyn std::error::Error
 //Fetching js code from the storage server
 pub async fn get_code_from_storage_server(attestation_doc:&str,id:&str) -> Result<Response, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
-    let url = "http://example.com/load";
+    let url = "http://example.com";
     let body = json!({
         "key": id
     });
