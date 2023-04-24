@@ -4,7 +4,7 @@ Oyster Serverless is a cutting-edge, high-performance serverless computing platf
 
 ## Getting started
 
-`Note : Oyster serverless application only works inside the enclave.`
+`Note : The Oyster serverless application only works inside the enclave. The current setup relies on a temporary storage server designed for testing.`
 
 <b>Install the following packages : </b>
 
