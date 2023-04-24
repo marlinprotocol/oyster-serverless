@@ -62,9 +62,9 @@ JSON body :
 
 ```
 {
-    "tx_hash":"0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113",
+    "code_id":"test",
     "input": {
-        "num":10
+        "num":100
     }
 }
 ```
