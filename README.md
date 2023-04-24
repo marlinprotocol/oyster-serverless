@@ -51,7 +51,7 @@ CGROUP_VERSION=2
 cargo build --release
 ```
 
-<b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-IP proxy.</b>
+<b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-IP proxy : </b>
 ```
 #Server
 [program:server]
