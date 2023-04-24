@@ -48,7 +48,7 @@ CGROUP_VERSION=2
 <b>Generate a release build :</b>
 
 ```
-cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust
+cargo build --release
 ```
 
 <b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-IP proxy.</b>
