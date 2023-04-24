@@ -53,9 +53,6 @@ cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverl
 
 <b>Make a request to the serveless application :</b>
 
-This transaction hash contains the JavaScript code that finds the prime factors of a given number :
-<a href="https://goerli.arbiscan.io/tx/0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113">0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113</a>
-
 Endpoint (POST) : `http://localhost:6000/api/serverless`
 
 JSON body :
@@ -67,20 +64,4 @@ JSON body :
         "num":100
     }
 }
-```
-</br>
-
-## Running the tests
-
-
-<b>Generate the tests : </b>
-```
-cargo test --no-run
-```
-
-<b>Execute the generated test output with root permission :</b>
-
-For example
-```
-sudo ./target/x86_64-unknown-linux-musl/debug/deps/serverlessrust-4ab6898ba3e00b88
 ```
