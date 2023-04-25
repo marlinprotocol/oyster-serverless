@@ -45,10 +45,30 @@ CGROUP_VERSION=2
 
 ## Running serverless application
 
-<b>Run the serverless application :</b>
+<b>Generate a release build :</b>
 
 ```
-cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust
+cargo build --release
+```
+
+<b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-IP proxy : </b>
+```
+#Server
+[program:server]
+command= /app/serverlessrust
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stdout
+stderr_logfile_maxbytes=0
+
+#Proxy for server
+[program:my-server-proxy]
+command=/app/vsock-to-ip --vsock-addr 88:6000 --ip-addr 127.0.0.1:6000
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stdout
+stderr_logfile_maxbytes=0
 ```
 
 <b>Make a request to the serveless application :</b>
