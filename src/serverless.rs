@@ -1,7 +1,7 @@
-use reqwest::Response;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
-use reqwest::{Error};
+use reqwest::Error;
+use reqwest::Response;
 use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
@@ -164,21 +164,18 @@ pub async fn get_attestation_doc() -> Result<Response, Box<dyn std::error::Error
 }
 
 //Fetching js code from the storage server
-pub async fn get_code_from_storage_server(attestation_doc:&str,id:&str) -> Result<Response, Box<dyn std::error::Error>> {
+pub async fn get_code_from_storage_server(
+    attestation_doc: &str,
+    id: &str,
+) -> Result<Response, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
     let url = "http://13.126.48.62:3000/load";
-    let body = json!({
-        "id": id
-    });
+    let body = json!({ "id": id });
 
     let mut headers = HeaderMap::new();
     headers.insert("Attestation", HeaderValue::from_str(attestation_doc)?);
 
-    let response = client.post(url)
-        .headers(headers)
-        .json(&body)
-        .send()
-        .await?;
+    let response = client.post(url).headers(headers).json(&body).send().await?;
 
     Ok(response)
 }

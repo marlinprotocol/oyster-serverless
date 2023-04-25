@@ -59,12 +59,13 @@ async fn serverless(
     //encode the attestation doc into base64
     let base64_encoded_attestation_doc = base64::encode(&attestation_document);
     //Fetching the js code from the storage server
-    let js_code = match get_code_from_storage_server(&base64_encoded_attestation_doc,code_id).await {
+    let js_code = match get_code_from_storage_server(&base64_encoded_attestation_doc, code_id).await
+    {
         Ok(code) => {
-            println!("Status : {}",code.status());
+            println!("Status : {}", code.status());
             if code.status() == StatusCode::OK {
                 code.text().await.unwrap()
-            }else {
+            } else {
                 return response(
                     None,
                     None,
@@ -75,7 +76,6 @@ async fn serverless(
                 );
             }
         }
-,
         Err(e) => {
             log::error!("{}", e);
             return response(
