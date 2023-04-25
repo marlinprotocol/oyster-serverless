@@ -51,7 +51,7 @@ CGROUP_VERSION=2
 cargo build --release
 ```
 
-<b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-IP proxy : </b>
+<b>Run the binary file within Oyster by utilizing supervisord and proxy the server using a vsock-to-ip proxy : </b>
 ```
 #Server
 [program:server]
@@ -71,6 +71,8 @@ stderr_logfile=/dev/stdout
 stderr_logfile_maxbytes=0
 ```
 
+`Note : oyster-serverless requires attestation server to be running inside oyster `
+
 <b>Make a request to the serveless application :</b>
 
 Endpoint (POST) : `http://localhost:6000/api/serverless`
@@ -84,4 +86,28 @@ JSON body :
         "num":100
     }
 }
+```
+
+</br>
+
+## Testing serverless application
+
+<b>Generate the tests : </b>
+
+```
+cargo test --no-run
+```
+
+`Note : oyster-serverless tests requires attestation server to be running inside oyster `
+
+<b>Run the test binary file within Oyster by utilizing supervisord : </b>
+```
+#Server tests
+[program:serverlesstest]
+command= /app/serverlessrust-c5133baa1a8a70aa
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stdout
+stderr_logfile_maxbytes=0
+autorestart=false
 ```
