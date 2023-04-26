@@ -62,7 +62,6 @@ async fn serverless(
     let js_code = match get_code_from_storage_server(&base64_encoded_attestation_doc, code_id).await
     {
         Ok(code) => {
-            println!("Status : {}", code.status());
             if code.status() == StatusCode::OK {
                 code.text().await.unwrap()
             } else {

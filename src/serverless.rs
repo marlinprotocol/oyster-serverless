@@ -170,7 +170,7 @@ pub async fn get_code_from_storage_server(
 ) -> Result<Response, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
     let url = "http://13.126.48.62:3000/load";
-    let body = json!({ "id": id });
+    let body = json!({ "key": id });
 
     let mut headers = HeaderMap::new();
     headers.insert("Attestation", HeaderValue::from_str(attestation_doc)?);
