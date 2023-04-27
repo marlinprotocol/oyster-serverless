@@ -2,6 +2,22 @@
 
 Oyster Serverless is a cutting-edge, high-performance serverless computing platform designed to securely execute JavaScript (JS) and WebAssembly (WASM) code in a highly controlled environment. Built using the Rust and Actix Web framework, Oyster serverless leverages the power and security of AWS Nitro Enclaves, Cloudflare workerd runtime, and cgroups to provide unparalleled isolation and protection for the executed code.
 
+## Serverless application flow 
+
+<ol>
+  <li>When a user makes a new request to the oyster-serverless platform, the request is forwarded to the oyster enclave via the load-balancer and proxies.</li>
+  <li>Inside the oyster-enclave, the request is redirected to the oyster-serverless HTTP application using a VSOCK-to-IP Proxy.</li>
+  <li>The serverless application generates an attestation document by making a HTTP request to the attestation server running inside the enclave.</li>
+  <li>The serverless application fetches the JavaScript code by making an HTTP request to the storage server, which contains the unique identifier and the attestation document. A JS file with a unique name is then generated using the fetched code.</li>
+  <li>A free port is found inside the enclave to run the workerd runtime.</li>
+  <li>A configuration file is generated using the JS file name and the free port.</li>
+  <li>A free cgroup with memory and CPU usage limits is selected.</li>
+  <li>The serverless application starts executing the workerd runtime inside the selected cgroup using the generated capnp configuration file and the downloaded JS file.</li>
+  <li>An HTTP request is made to the workerd runtime, including any input provided by the user in the original request.</li>
+  <li>Once a response is received from the workerd runtime, it is terminated using its PID, and the JS and configuration files are deleted from inside the enclave.</li>
+  <li>The response from the workerd runtime is forwarded to the load balancer, which marks the request as closed and sends the response back to the user.</li>
+</ol>
+
 ## Getting started
 
 `Note : The Oyster serverless application only works inside the enclave. The current setup relies on a temporary storage server designed for testing.`
