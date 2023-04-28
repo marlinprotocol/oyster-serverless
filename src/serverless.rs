@@ -22,21 +22,17 @@ pub fn get_free_port() -> u16 {
 }
 
 //Generating the js file using the decoded calldata
-pub async fn create_js_file(
-    decoded_calldata: &str,
-    tx_hash: &str,
-    workerd_runtime_path: &str,
-) -> std::io::Result<()> {
-    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".js").await?;
-    file.write_all(decoded_calldata.as_bytes()).await?;
+pub async fn create_js_file(code: &str, file_path: &str) -> std::io::Result<()> {
+    let mut file = File::create(file_path).await?;
+    file.write_all(code.as_bytes()).await?;
     Ok(())
 }
 
 //Generating a capnp configuration file
 pub async fn create_capnp_file(
-    tx_hash: &str,
+    file_name: &str,
     free_port: u16,
-    workerd_runtime_path: &str,
+    file_path: &str,
 ) -> std::io::Result<()> {
     let capnp_data = format!(
         "using Workerd = import \"/workerd/workerd.capnp\";
@@ -47,12 +43,12 @@ pub async fn create_capnp_file(
     );
     
     const oysterServerless :Workerd.Worker = (
-      serviceWorkerScript = embed \"{tx_hash}.js\",
+      serviceWorkerScript = embed \"{file_name}.js\",
       compatibilityDate = \"2022-09-16\",
     );"
     );
 
-    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".capnp").await?;
+    let mut file = File::create(file_path).await?;
     file.write_all(capnp_data.as_bytes()).await?;
     Ok(())
 }
@@ -155,7 +151,7 @@ pub fn get_cgroup_list(cgroup_version: u8) -> Result<Vec<String>, std::io::Error
     Ok(cgroup_list)
 }
 
-//Fetch the js code from the storage server
+//Fetch the attestation document
 pub async fn get_attestation_doc() -> Result<Response, Box<dyn std::error::Error>> {
     let req_url = "http://127.0.0.1:1300".to_string();
     let client = reqwest::Client::new();

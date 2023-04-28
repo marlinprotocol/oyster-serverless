@@ -7,7 +7,7 @@ Oyster Serverless is a cutting-edge, high-performance serverless computing platf
 <ol>
   <li>When a user makes a new request to the oyster-serverless platform, the request is forwarded to the oyster enclave via the load-balancer and proxies.</li>
   <li>Inside the oyster-enclave, the request is redirected to the oyster-serverless HTTP application using a VSOCK-to-IP Proxy.</li>
-  <li>The serverless application generates an attestation document by making a HTTP request to the attestation server running inside the enclave.</li>
+  <li>The serverless application generates an attestation document by making an HTTP request to the attestation server running inside the enclave.</li>
   <li>The serverless application fetches the JavaScript code by making an HTTP request to the storage server, which contains the unique identifier and the attestation document. A JS file with a unique name is then generated using the fetched code.</li>
   <li>A free port is found inside the enclave to run the workerd runtime.</li>
   <li>A configuration file is generated using the JS file name and the free port.</li>

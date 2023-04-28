@@ -94,8 +94,12 @@ async fn serverless(
     let free_port = get_free_port();
     log::info!("Free port: {}", &free_port);
 
+    //Creating file names
+    let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
+    let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
+
     //Generating the js and capnp file
-    let js_file = create_js_file(&js_code, &file_name, &workerd_runtime_path).await;
+    let js_file = create_js_file(&js_code, &js_file_path).await;
 
     match js_file {
         Ok(_) => {
@@ -114,7 +118,7 @@ async fn serverless(
         }
     };
 
-    let capnp_file = create_capnp_file(&file_name, free_port, &workerd_runtime_path).await;
+    let capnp_file = create_capnp_file(&file_name, free_port, &capnp_file_path).await;
 
     match capnp_file {
         Ok(_) => {
@@ -124,7 +128,7 @@ async fn serverless(
             log::error!("Error : {}", e);
             return response(
                 None,
-                None,
+                Some(&js_file_path),
                 None,
                 None,
                 "Error generating the configuration file.",
@@ -132,9 +136,6 @@ async fn serverless(
             );
         }
     }
-
-    let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
-    let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
     //Finding an available cgroup
     let cgroup_list = &appstate.cgroup_list;
@@ -199,8 +200,7 @@ async fn serverless(
 
     // Wait for the port to bind
     if wait_for_port(free_port) {
-        //Fetching the workerd response
-
+        //Fetching the workerd response with 30sec timeout
         let api_response_with_timeout = timeout(
             Duration::from_secs(30),
             get_workerd_response(free_port, jsonbody.input.as_ref().cloned()),
