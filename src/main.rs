@@ -9,11 +9,22 @@ use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 
 use std::env;
+use std::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    let gateway_url = env::var("GATEWAY").unwrap();
+    let client = awc::Client::default();
+    let response = client
+        .get("http://".to_owned() + &gateway_url + "/register")
+        .insert_header(("worker-id", "test"))
+        .send()
+        .await;
+
+    println!("{:?}", response);
 
     let port: u16 = env::var("PORT")
         .unwrap()
@@ -31,12 +42,15 @@ async fn main() -> std::io::Result<()> {
         std::process::exit(1);
     }
 
+    let app_data = web::Data::new(AppState {
+        cgroup_list: cgroup_list.clone(),
+        cgroup_version,
+        running: Mutex::new(true),
+    });
+
     let server = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState {
-                cgroup_list: cgroup_list.clone(),
-                cgroup_version,
-            }))
+            .app_data(app_data.clone())
             .configure(handler::config)
     })
     .bind(("0.0.0.0", port))

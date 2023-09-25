@@ -5,7 +5,7 @@ use crate::{
 };
 
 use actix_web::http::StatusCode;
-use actix_web::{post, web, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::env;
 use std::io::{BufRead, BufReader};
@@ -22,7 +22,16 @@ async fn serverless(
 ) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
+    let current_running = appstate.running.lock().unwrap();
+
+    if !*current_running {
+        return HttpResponse::BadRequest()
+            .status(StatusCode::BAD_REQUEST)
+            .body("Worker Unregistered");
+    }
+
     if let Err(err) = jsonbody.validate() {
+        println!("here");
         log::error!("{}", err);
         return response(
             None,
@@ -338,7 +347,22 @@ async fn serverless(
     }
 }
 
+#[get("/unregister")]
+async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
+    let mut current_running = appstate.running.lock().unwrap();
+
+    if *current_running {
+        *current_running = false;
+
+        return HttpResponse::Ok().status(StatusCode::OK).body("SUCCESS");
+    } else {
+        return HttpResponse::NotFound()
+            .status(StatusCode::NOT_FOUND)
+            .finish();
+    }
+}
+
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api").service(serverless);
+    let scope = web::scope("/api").service(serverless).service(unregister);
     conf.service(scope);
 }
