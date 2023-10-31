@@ -7,6 +7,7 @@ pub mod serverlesstest {
     use dotenv::dotenv;
     use serde_json::json;
     use std::env;
+    use std::sync::Mutex;
 
     #[actix_web::test]
     async fn valid_input_test() {
@@ -27,6 +28,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -66,6 +68,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -107,6 +110,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -148,6 +152,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -184,6 +189,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -225,6 +231,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
@@ -263,6 +270,7 @@ pub mod serverlesstest {
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
                     cgroup_version,
+                    running: Mutex::new(true),
                 }))
                 .configure(handler::config),
         )
