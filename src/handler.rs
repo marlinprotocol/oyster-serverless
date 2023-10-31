@@ -7,7 +7,6 @@ use crate::{
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
-use std::env;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use std::time::Instant;
@@ -43,7 +42,7 @@ async fn serverless(
         );
     }
 
-    let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
+    let workerd_runtime_path = appstate.runtime_path.clone();
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
 
     //Creating a unique file name for the output file

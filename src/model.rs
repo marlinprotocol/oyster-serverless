@@ -14,4 +14,5 @@ pub struct AppState {
     pub cgroup_list: Vec<String>,
     pub cgroup_version: u8,
     pub running: Mutex<bool>,
+    pub runtime_path: String,
 }

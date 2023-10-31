@@ -3,21 +3,17 @@ pub mod serverlesstest {
 
     use crate::model::AppState;
     use crate::{handler, serverless};
+    use crate::Args;
     use actix_web::{http, test, web, App};
-    use dotenv::dotenv;
+    use clap::Parser;
     use serde_json::json;
-    use std::env;
     use std::sync::Mutex;
+    
 
     #[actix_web::test]
     async fn valid_input_test() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -27,8 +23,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -51,13 +48,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn interacting_with_wrong_smartcontract() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -67,8 +59,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -93,13 +86,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_txhash() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -109,8 +97,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -135,13 +124,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn txhash_not_provided() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -151,8 +135,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -172,13 +157,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_js_code_in_calldata() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -188,8 +168,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -214,13 +195,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_payload_test() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -230,8 +206,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )
@@ -253,13 +230,8 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn response_timeout_test() {
-        dotenv().ok();
-        let cgroup_version: u8 = env::var("CGROUP_VERSION")
-            .unwrap()
-            .parse::<u8>()
-            .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
-
-        let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
+        let cli = Args::parse();
+        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
         if cgroup_list.is_empty() {
             log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
             std::process::exit(1);
@@ -269,8 +241,9 @@ pub mod serverlesstest {
             App::new()
                 .app_data(web::Data::new(AppState {
                     cgroup_list: cgroup_list.clone(),
-                    cgroup_version,
+                    cgroup_version: cli.cgroup_version,
                     running: Mutex::new(true),
+                    runtime_path: cli.runtime_path
                 }))
                 .configure(handler::config),
         )

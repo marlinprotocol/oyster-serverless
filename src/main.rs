@@ -6,17 +6,36 @@ mod tests;
 
 use crate::model::AppState;
 use actix_web::{web, App, HttpServer};
-use dotenv::dotenv;
 
-use std::env;
+use clap::Parser;
+
+/// Oyster Serverless
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    // port for web server
+    #[clap(long, value_parser, default_value = "6001")]
+    port: u16,
+
+    // path to workerd runtime
+    #[clap(long, value_parser, default_value = "./runtime/")]
+    runtime_path: String,
+
+    // cgroup version
+    #[clap(long, value_parser, default_value = "2")]
+    cgroup_version: u8,
+
+    // gateway address url
+    #[clap(long, value_parser, default_value = "www.marlin.org")]
+    gateway: String,
+}
 use std::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
-    let gateway_url = env::var("GATEWAY").unwrap();
+    let cli = Args::parse();
+    
+    let gateway_url = cli.gateway;
     let client = awc::Client::default();
     let response = client
         .get("http://".to_owned() + &gateway_url + "/register")
@@ -26,15 +45,9 @@ async fn main() -> std::io::Result<()> {
 
     println!("{:?}", response);
 
-    let port: u16 = env::var("PORT")
-        .unwrap()
-        .parse::<u16>()
-        .expect("PORT must be a valid number");
+    let port: u16 = cli.port;
 
-    let cgroup_version: u8 = env::var("CGROUP_VERSION")
-        .unwrap()
-        .parse::<u8>()
-        .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+    let cgroup_version: u8 = cli.cgroup_version;
 
     let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
     if cgroup_list.is_empty() {
@@ -46,6 +59,7 @@ async fn main() -> std::io::Result<()> {
         cgroup_list: cgroup_list.clone(),
         cgroup_version,
         running: Mutex::new(true),
+        runtime_path: cli.runtime_path,
     });
 
     let server = HttpServer::new(move || {
