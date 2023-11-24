@@ -121,7 +121,8 @@ pub async fn run_workerd_runtime(
     workerd_runtime_path: &str,
     available_cgroup: &str,
 ) -> Result<Child, Box<dyn std::error::Error>> {
-    let child = Command::new("/usr/bin/cgexec")
+    let child = Command::new("sudo")
+        .arg("/usr/bin/cgexec")
         .arg("-g")
         .arg("memory:".to_string() + available_cgroup)
         .arg(workerd_runtime_path.to_string() + "workerd")

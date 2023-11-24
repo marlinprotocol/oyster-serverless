@@ -6,24 +6,44 @@ mod tests;
 
 use crate::model::AppState;
 use actix_web::{web, App, HttpServer};
-use dotenv::dotenv;
 
-use std::env;
+use clap::Parser;
+
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[clap(long, value_parser, default_value = "6001")]
+    port: u16,
+
+    #[clap(long, value_parser, default_value = "./runtime/")]
+    runtime_path: String,
+
+    #[clap(long, value_parser, default_value = "2")]
+    cgroup_version: u8,
+
+    #[clap(long, value_parser, default_value = "www.marlin.org")]
+    gateway: String,
+}
+use std::sync::Mutex;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    let cli = Args::parse();
 
-    let port: u16 = env::var("PORT")
-        .unwrap()
-        .parse::<u16>()
-        .expect("PORT must be a valid number");
+    // let gateway_url = cli.gateway;
+    // let client = awc::Client::default();
+    // let response = client
+    //     .get("http://".to_owned() + &gateway_url + "/register")
+    //     .insert_header(("worker-id", "test"))
+    //     .send()
+    //     .await;
 
-    let cgroup_version: u8 = env::var("CGROUP_VERSION")
-        .unwrap()
-        .parse::<u8>()
-        .expect("CGROUP VERSION must be a valid number ( Options: 1 or 2)");
+    // println!("{:?}", response);
+
+    let port: u16 = cli.port;
+
+    let cgroup_version: u8 = cli.cgroup_version;
 
     let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
     if cgroup_list.is_empty() {
@@ -31,12 +51,16 @@ async fn main() -> std::io::Result<()> {
         std::process::exit(1);
     }
 
+    let app_data = web::Data::new(AppState {
+        cgroup_list: cgroup_list.clone(),
+        cgroup_version,
+        running: Mutex::new(true),
+        runtime_path: cli.runtime_path,
+    });
+
     let server = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState {
-                cgroup_list: cgroup_list.clone(),
-                cgroup_version,
-            }))
+            .app_data(app_data.clone())
             .configure(handler::config)
     })
     .bind(("0.0.0.0", port))

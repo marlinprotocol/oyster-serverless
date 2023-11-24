@@ -1,0 +1,1 @@
+addEventListener('fetch', (event) => { event.respondWith(handleRequest(event.request)); }); async function handleRequest(request) { return new Promise((resolve) => { setTimeout(() => { const response = new Response('Delayed response after 35 seconds.', { status: 200, headers: { 'Content-Type': 'text/plain' }, }); resolve(response); }, 35000); }); }

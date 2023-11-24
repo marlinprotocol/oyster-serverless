@@ -5,9 +5,8 @@ use crate::{
 };
 
 use actix_web::http::StatusCode;
-use actix_web::{post, web, Responder};
+use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
-use std::env;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 use std::time::Instant;
@@ -22,7 +21,16 @@ async fn serverless(
 ) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
     // Validation for the request json body
+    let current_running = appstate.running.lock().unwrap();
+
+    if !*current_running {
+        return HttpResponse::BadRequest()
+            .status(StatusCode::BAD_REQUEST)
+            .body("Worker Unregistered");
+    }
+
     if let Err(err) = jsonbody.validate() {
+        println!("here");
         log::error!("{}", err);
         return response(
             None,
@@ -34,7 +42,7 @@ async fn serverless(
         );
     }
 
-    let workerd_runtime_path = env::var("RUNTIME_PATH").expect("RUNTIME_PATH must be a valid path");
+    let workerd_runtime_path = appstate.runtime_path.clone();
     let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
 
     //Creating a unique file name for the output file
@@ -143,6 +151,15 @@ async fn serverless(
         }
     }
 
+    // return response(
+    //     None,
+    //     None,
+    //     None,
+    //     None,
+    //     "Error generating the configuration file.",
+    //     StatusCode::INTERNAL_SERVER_ERROR,
+    // );
+
     let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
 
@@ -174,12 +191,30 @@ async fn serverless(
             StatusCode::INTERNAL_SERVER_ERROR,
         );
     }
-
     //Run the workerd runtime with generated files
 
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
-
-    if workerd.is_err() {
+    
+    // let wrkr = match workerd {
+    //     Ok(child) => child,
+    //     Err(e) => {
+    //         return response(
+    //             Some(&capnp_file_path),
+    //             Some(&js_file_path),
+    //             None,
+    //             None,
+    //             "Error running the workerd runtime",
+    //             StatusCode::INTERNAL_SERVER_ERROR,
+    //         );
+    //     }
+    // };
+    
+    // if let Some(wrkr_err) = wrkr.stderr {
+    //     println!("{:?}", wrkr_err);
+    // };
+    
+    
+    if workerd.is_err() {    
         let workerd_error = workerd.err();
         log::error!("Error running the workerd runtime: {:?}", workerd_error);
         return response(
@@ -206,11 +241,10 @@ async fn serverless(
             );
         }
     };
-
+    // println!("{:?}", workerd_process);
     // Wait for the port to bind
     if wait_for_port(free_port) {
         //Fetching the workerd response
-
         let api_response_with_timeout = timeout(
             Duration::from_secs(30),
             get_workerd_response(free_port, jsonbody.input.as_ref().cloned()),
@@ -338,7 +372,22 @@ async fn serverless(
     }
 }
 
+#[get("/unregister")]
+async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
+    let mut current_running = appstate.running.lock().unwrap();
+
+    if *current_running {
+        *current_running = false;
+
+        return HttpResponse::Ok().status(StatusCode::OK).body("SUCCESS");
+    } else {
+        return HttpResponse::NotFound()
+            .status(StatusCode::NOT_FOUND)
+            .finish();
+    }
+}
+
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api").service(serverless);
+    let scope = web::scope("/api").service(serverless).service(unregister);
     conf.service(scope);
 }
