@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 for i in $(seq 1 20)
 do
   cgcreate -g memory,cpu:workerd_$i
