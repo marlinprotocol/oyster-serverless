@@ -3,7 +3,13 @@ name = "oyster-serverless"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "serverless"
+path = "src/lib.rs"
+
+[[bin]]
+name = "oyster-serverless"
+path = "src/main.rs"
 
 [dependencies]
 serde_json="1.0"
