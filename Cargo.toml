@@ -11,6 +11,10 @@ path = "src/lib.rs"
 name = "oyster-serverless"
 path = "src/main.rs"
 
+[[bin]]
+name = "cgroups_retriever"
+path = "src/cgroups_retriever.rs"
+
 [dependencies]
 serde_json="1.0"
 serde = { version = "1.0", features = ["derive"] }
