@@ -9,13 +9,11 @@ pub enum CgroupsError {
 
 pub struct Cgroups {
     pub free: Vec<String>,
-    pub used: Vec<String>,
 }
 
 impl Cgroups {
     pub fn new() -> Result<Cgroups, CgroupsError> {
         Ok(Cgroups {
-            used: Vec::new(),
             free: get_cgroups().map_err(CgroupsError::Fetch)?,
         })
     }
