@@ -18,5 +18,7 @@ enum ServerlessError {
     #[error("Calldata is not a valid hex string")]
     BadCalldata(#[from] hex::FromHexError),
     #[error("failed to create code file")]
-    CodeFileCreate(#[from] tokio::io::Error),
+    CodeFileCreate(#[source] tokio::io::Error),
+    #[error("failed to create code file")]
+    ConfigFileCreate(#[source] tokio::io::Error),
 }

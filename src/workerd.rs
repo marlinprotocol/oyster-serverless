@@ -61,7 +61,11 @@ async fn create_code_file(
     let calldata = hex::decode(calldata)?;
 
     // write calldata to file
-    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js").await?;
-    file.write_all(calldata.as_slice()).await?;
+    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")
+        .await
+        .map_err(ServerlessError::CodeFileCreate)?;
+    file.write_all(calldata.as_slice())
+        .await
+        .map_err(ServerlessError::CodeFileCreate)?;
     Ok(())
 }
