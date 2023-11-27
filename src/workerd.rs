@@ -1,9 +1,29 @@
+use thiserror::Error;
+
 use reqwest::Client;
 use serde_json::{json, Value};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-use crate::ServerlessError;
+#[derive(Error, Debug)]
+enum ServerlessError {
+    #[error("failed to retrieve calldata")]
+    CalldataRetrieve(#[from] reqwest::Error),
+    #[error("Tx not found")]
+    TxNotFound,
+    #[error("To field of transaction is not an address")]
+    InvalidTxToType,
+    #[error("To address {0} does not match expected {1}")]
+    InvalidTxToValue(String, &'static str),
+    #[error("Calldata field of transaction is not a string")]
+    InvalidTxCalldataType,
+    #[error("Calldata is not a valid hex string")]
+    BadCalldata(#[from] hex::FromHexError),
+    #[error("failed to create code file")]
+    CodeFileCreate(#[source] tokio::io::Error),
+    #[error("failed to create code file")]
+    ConfigFileCreate(#[source] tokio::io::Error),
+}
 
 async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
     let client = Client::new();
@@ -92,7 +112,7 @@ const oysterWorker :Workerd.Worker = (
     );
 
     let mut file =
-        File::create(workerd_runtime_path.to_string() + "/" + tx_hash + "-" + slug + ".capnp")
+        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
             .await
             .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
