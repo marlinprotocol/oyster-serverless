@@ -1,4 +1,11 @@
 use std::fs;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum CgroupsError {
+    #[error("failed to retrieve cgroups")]
+    Fetch(#[source] std::io::Error),
+}
 
 pub struct Cgroups {
     pub free: Vec<String>,
@@ -6,10 +13,10 @@ pub struct Cgroups {
 }
 
 impl Cgroups {
-    pub fn new() -> Result<Cgroups, std::io::Error> {
+    pub fn new() -> Result<Cgroups, CgroupsError> {
         Ok(Cgroups {
-            free: get_cgroups()?,
             used: Vec::new(),
+            free: get_cgroups().map_err(CgroupsError::Fetch)?,
         })
     }
 }
