@@ -39,8 +39,6 @@ async fn main() -> std::io::Result<()> {
     //     .send()
     //     .await;
 
-    // println!("{:?}", response);
-
     let port: u16 = cli.port;
 
     let cgroup_version: u8 = cli.cgroup_version;
