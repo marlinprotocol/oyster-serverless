@@ -69,3 +69,32 @@ async fn create_code_file(
         .map_err(ServerlessError::CodeFileCreate)?;
     Ok(())
 }
+
+async fn create_config_file(
+    tx_hash: &str,
+    workerd_runtime_path: &str,
+    free_port: u16,
+) -> Result<(), ServerlessError> {
+    let capnp_data = format!(
+        "
+using Workerd = import \"/workerd/workerd.capnp\";
+
+const oysterConfig :Workerd.Config = (
+  services = [ (name = \"main\", worker = .oysterWorker) ],
+  sockets = [ ( name = \"http\", address = \"*:{free_port}\", http = (), service = \"main\" ) ]
+);
+
+const oysterWorker :Workerd.Worker = (
+  serviceWorkerScript = embed \"{tx_hash}.js\",
+  compatibilityDate = \"2022-09-16\",
+);"
+    );
+
+    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".capnp")
+        .await
+        .map_err(ServerlessError::ConfigFileCreate)?;
+    file.write_all(capnp_data.as_bytes())
+        .await
+        .map_err(ServerlessError::ConfigFileCreate)?;
+    Ok(())
+}
