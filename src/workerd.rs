@@ -127,6 +127,7 @@ const oysterWorker :Workerd.Worker = (
     Ok(())
 }
 
+// TODO: timeouts?
 async fn execute(
     tx_hash: &str,
     slug: &str,
