@@ -29,6 +29,12 @@ enum ServerlessError {
     ConfigFileCreate(#[source] tokio::io::Error),
     #[error("failed to execute workerd")]
     Execute(#[from] CgroupsError),
+    #[error("failed to terminate workerd")]
+    Terminate(#[source] tokio::io::Error),
+    #[error("failed to delete code file")]
+    CodeFileDelete(#[source] tokio::io::Error),
+    #[error("failed to delete config file")]
+    ConfigFileDelete(#[source] tokio::io::Error),
 }
 
 async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
@@ -142,4 +148,25 @@ async fn execute(
     ];
 
     Ok(cgroups.execute(args)?)
+}
+
+async fn terminate(
+    tx_hash: &str,
+    slug: &str,
+    workerd_runtime_path: &str,
+    cgroups: &mut Cgroups,
+    child: &mut Child,
+    cgroup: String,
+) -> Result<(), ServerlessError> {
+    child.kill().map_err(ServerlessError::Terminate)?;
+    cgroups.release(cgroup);
+
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+        .await
+        .map_err(ServerlessError::CodeFileDelete)?;
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+        .await
+        .map_err(ServerlessError::ConfigFileDelete)?;
+
+    Ok(())
 }
