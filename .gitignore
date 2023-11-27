@@ -20,8 +20,5 @@ Cargo.lock
 # For multipart example
 upload.png
 
-# any dotenv files
-.env
-
 # file uploads
 /tmp
