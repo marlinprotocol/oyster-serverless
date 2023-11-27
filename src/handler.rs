@@ -4,8 +4,11 @@ use crate::{
     serverless::*,
 };
 
-use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::{
+    get,
+    http::{header, StatusCode},
+    post, web, HttpRequest, HttpResponse, Responder,
+};
 use serde_json::Value;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
@@ -18,8 +21,10 @@ use validator::Validate;
 async fn serverless(
     jsonbody: web::Json<RequestBody>,
     appstate: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
     log::info!("*********NEW**REQUEST*******");
+
     // Validation for the request json body
     let current_running = appstate.running.lock().unwrap();
 
@@ -43,7 +48,10 @@ async fn serverless(
     }
 
     let workerd_runtime_path = appstate.runtime_path.clone();
-    let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
+
+    let domain = req.headers().get(header::HOST).unwrap().to_str().unwrap();
+    let domain_parts: Vec<&str> = domain.split('.').collect();
+    let tx_hash = domain_parts[0];
 
     //Creating a unique file name for the output file
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
@@ -194,7 +202,7 @@ async fn serverless(
     //Run the workerd runtime with generated files
 
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
-    
+
     // let wrkr = match workerd {
     //     Ok(child) => child,
     //     Err(e) => {
@@ -208,13 +216,12 @@ async fn serverless(
     //         );
     //     }
     // };
-    
+
     // if let Some(wrkr_err) = wrkr.stderr {
     //     println!("{:?}", wrkr_err);
     // };
-    
-    
-    if workerd.is_err() {    
+
+    if workerd.is_err() {
         let workerd_error = workerd.err();
         log::error!("Error running the workerd runtime: {:?}", workerd_error);
         return response(
