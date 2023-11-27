@@ -2357,6 +2357,7 @@ dependencies = [
  "awc",
  "clap",
  "ethers",
+ "hex",
  "log",
  "openssl",
  "reqwest",
