@@ -90,7 +90,7 @@ const oysterWorker :Workerd.Worker = (
 );"
     );
 
-    let mut file = File::create(workerd_runtime_path.to_string() + tx_hash + ".capnp")
+    let mut file = File::create(workerd_runtime_path.to_string() + "/" + tx_hash + ".capnp")
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
