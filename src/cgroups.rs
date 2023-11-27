@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum CgroupsError {
     #[error("failed to retrieve cgroups")]
     Fetch(#[source] std::io::Error),
+    #[error("no free cgroups left")]
+    NoFree,
 }
 
 pub struct Cgroups {
@@ -16,6 +18,18 @@ impl Cgroups {
         Ok(Cgroups {
             free: get_cgroups().map_err(CgroupsError::Fetch)?,
         })
+    }
+
+    pub fn reserve(&mut self) -> Result<String, CgroupsError> {
+        if self.free.len() == 0 {
+            return Err(CgroupsError::NoFree);
+        }
+
+        Ok(self.free.swap_remove(0))
+    }
+
+    pub fn release(&mut self, cgroup: String) {
+        self.free.push(cgroup);
     }
 }
 
