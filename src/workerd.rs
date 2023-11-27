@@ -1,9 +1,13 @@
+use std::process::Child;
+
 use thiserror::Error;
 
 use reqwest::Client;
 use serde_json::{json, Value};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+
+use crate::cgroups::{Cgroups, CgroupsError};
 
 #[derive(Error, Debug)]
 enum ServerlessError {
@@ -23,6 +27,8 @@ enum ServerlessError {
     CodeFileCreate(#[source] tokio::io::Error),
     #[error("failed to create code file")]
     ConfigFileCreate(#[source] tokio::io::Error),
+    #[error("failed to execute workerd")]
+    Execute(#[from] CgroupsError),
 }
 
 async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
@@ -119,4 +125,20 @@ const oysterWorker :Workerd.Worker = (
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
     Ok(())
+}
+
+async fn execute(
+    tx_hash: &str,
+    slug: &str,
+    workerd_runtime_path: &str,
+    cgroups: &mut Cgroups,
+) -> Result<(Child, String), ServerlessError> {
+    let args = [
+        &(workerd_runtime_path.to_owned() + "/workerd"),
+        "serve",
+        &(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp"),
+        "--verbose",
+    ];
+
+    Ok(cgroups.execute(args)?)
 }
