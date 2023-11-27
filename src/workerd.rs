@@ -25,6 +25,8 @@ async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
     Ok(json_response)
 }
 
+// TODO: what happens if two requests come with same tx hash
+
 async fn create_code_file(
     tx_hash: &str,
     workerd_runtime_path: &str,
