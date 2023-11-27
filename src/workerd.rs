@@ -25,10 +25,9 @@ async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
     Ok(json_response)
 }
 
-// TODO: what happens if two requests come with same tx hash
-
 async fn create_code_file(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
 ) -> Result<(), ServerlessError> {
     // get tx data
@@ -61,9 +60,10 @@ async fn create_code_file(
     let calldata = hex::decode(calldata)?;
 
     // write calldata to file
-    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")
-        .await
-        .map_err(ServerlessError::CodeFileCreate)?;
+    let mut file =
+        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+            .await
+            .map_err(ServerlessError::CodeFileCreate)?;
     file.write_all(calldata.as_slice())
         .await
         .map_err(ServerlessError::CodeFileCreate)?;
@@ -72,6 +72,7 @@ async fn create_code_file(
 
 async fn create_config_file(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
     free_port: u16,
 ) -> Result<(), ServerlessError> {
@@ -90,9 +91,10 @@ const oysterWorker :Workerd.Worker = (
 );"
     );
 
-    let mut file = File::create(workerd_runtime_path.to_string() + "/" + tx_hash + ".capnp")
-        .await
-        .map_err(ServerlessError::ConfigFileCreate)?;
+    let mut file =
+        File::create(workerd_runtime_path.to_string() + "/" + tx_hash + "-" + slug + ".capnp")
+            .await
+            .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
