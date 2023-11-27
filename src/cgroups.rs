@@ -1,4 +1,7 @@
+use std::ffi::OsStr;
 use std::fs;
+use std::process::{Child, Command, Stdio};
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -7,6 +10,8 @@ pub enum CgroupsError {
     Fetch(#[source] std::io::Error),
     #[error("no free cgroups left")]
     NoFree,
+    #[error("failed to retrieve cgroups")]
+    Execute(#[source] std::io::Error),
 }
 
 pub struct Cgroups {
@@ -30,6 +35,24 @@ impl Cgroups {
 
     pub fn release(&mut self, cgroup: String) {
         self.free.push(cgroup);
+    }
+
+    pub fn execute(
+        &mut self,
+        args: impl IntoIterator<Item = impl AsRef<OsStr>>,
+    ) -> Result<(Child, String), CgroupsError> {
+        let cgroup = self.reserve()?;
+
+        let child = Command::new("sudo")
+            .arg("/usr/bin/cgexec")
+            .arg("-g")
+            .arg("memory:".to_string() + &cgroup)
+            .args(args)
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(CgroupsError::Execute)?;
+
+        Ok((child, cgroup))
     }
 }
 
