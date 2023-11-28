@@ -20,12 +20,9 @@ async fn serverless(
     appstate: web::Data<AppState>,
 ) -> impl Responder {
     // check if the server is draining
-    let current_running = appstate.running.lock().unwrap();
-
-    if !*current_running {
-        return HttpResponse::BadRequest()
-            .status(StatusCode::BAD_REQUEST)
-            .body("Worker Unregistered");
+    let is_running = appstate.running.lock().unwrap();
+    if !*is_running {
+        return HttpResponse::Gone().body("worker unregistered");
     }
 
     // validate request body
