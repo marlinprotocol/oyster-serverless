@@ -37,7 +37,7 @@ pub mod serverlesstest {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
-        println!("{:?}", resp.response().body());
+
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
 
