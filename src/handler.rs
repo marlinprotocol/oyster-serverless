@@ -239,7 +239,7 @@ async fn serverless(
         .duration_since(execution_timer_start)
         .as_millis()
         .to_string();
-    log::info!("Execution time: {}ms", execution_time);
+    println!("Execution time: {}ms", execution_time);
 
     let status = response.status();
     return response

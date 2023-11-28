@@ -55,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
     .context(format!("could not bind to port {port}"))?
     .run();
 
-    log::info!("Server started on port {}", port);
+    println!("Server started on port {}", port);
 
     server.await?;
 
