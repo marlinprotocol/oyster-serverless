@@ -1,21 +1,17 @@
 use crate::{
     cgroups,
     model::{AppState, RequestBody},
-    response::response,
-    serverless::*,
     workerd,
 };
 
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use anyhow::{anyhow, Context};
-use serde_json::Value;
+use anyhow::anyhow;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::time::timeout;
-use uuid::Uuid;
 use validator::Validate;
 
 #[post("/serverless")]
