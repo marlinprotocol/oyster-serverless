@@ -75,7 +75,7 @@ async fn create_code_file(
     }?;
 
     // check contract address matches expected
-    if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
+    if contract_address != "0x30694a76d737211a908d0dd672f47e1d29fbfb02" {
         return Err(ServerlessError::InvalidTxToValue(
             contract_address,
             "0x30694a76d737211a908d0dd672f47e1d29fbfb02",
