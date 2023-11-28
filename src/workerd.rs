@@ -136,7 +136,9 @@ const oysterWorker :Workerd.Worker = (
 }
 
 fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
-    u16::from_str_radix(&cgroup[8..], 10).map_err(ServerlessError::BadPort)
+    u16::from_str_radix(&cgroup[8..], 10)
+        .map(|x| x + 11000)
+        .map_err(ServerlessError::BadPort)
 }
 
 // TODO: timeouts?
