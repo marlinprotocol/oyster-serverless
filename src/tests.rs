@@ -1,3 +1,8 @@
+// TODO: tests have to be run one by one currently
+// I *think* it is because parallel actix services all get the same cgroup list
+// which means they all get the same port mappings and might collide
+// But it might also be hidden concurrency issues, investigate and fix
+
 #[cfg(test)]
 pub mod serverlesstest {
     use crate::cgroups::Cgroups;
