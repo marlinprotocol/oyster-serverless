@@ -211,7 +211,14 @@ async fn serverless(
         .to_string();
     log::info!("Execution time: {}ms", execution_time);
 
-    return HttpResponse::build(response.status()).body(response.bytes().await.unwrap_or_default());
+    return response
+        .headers_mut()
+        .into_iter()
+        .fold(HttpResponse::build(response.status()), |resp, header| {
+            resp.append_header((header.0.clone(), header.1.clone()));
+            resp
+        })
+        .body(response.bytes().await.unwrap_or_default());
 }
 
 #[get("/unregister")]
