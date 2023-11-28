@@ -70,6 +70,9 @@ async fn serverless(
     // reserve cgroup
     let cgroup = appstate.cgroups.reserve();
     if let Err(err) = cgroup {
+        // cleanup
+        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
+
         return match err {
             cgroups::CgroupsError::NoFree => {
                 return HttpResponse::TooManyRequests().body(format!(
@@ -88,6 +91,10 @@ async fn serverless(
     // get port for cgroup
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
+        // cleanup
+        appstate.cgroups.release(cgroup);
+        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
+
         return match err {
             workerd::ServerlessError::BadPort(_) => {
                 return HttpResponse::InternalServerError().body(format!(
@@ -105,6 +112,10 @@ async fn serverless(
 
     // create config file
     if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
+        // cleanup
+        appstate.cgroups.release(cgroup);
+        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
+
         use workerd::ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
@@ -130,6 +141,11 @@ async fn serverless(
     // start worker
     let child = workerd::execute(tx_hash, slug, workerd_runtime_path, &cgroup).await;
     if let Err(err) = child {
+        // cleanup
+        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
+        appstate.cgroups.release(cgroup);
+        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
+
         return HttpResponse::BadRequest().body(format!(
             "{:?}",
             anyhow!(err).context("failed to execute worker")

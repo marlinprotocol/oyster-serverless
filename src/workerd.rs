@@ -193,3 +193,25 @@ pub async fn wait_for_port(port: u16) -> bool {
     }
     false
 }
+
+pub async fn cleanup_code_file(
+    tx_hash: &str,
+    slug: &str,
+    workerd_runtime_path: &str,
+) -> Result<(), ServerlessError> {
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+        .await
+        .map_err(ServerlessError::CodeFileDelete)?;
+    Ok(())
+}
+
+pub async fn cleanup_config_file(
+    tx_hash: &str,
+    slug: &str,
+    workerd_runtime_path: &str,
+) -> Result<(), ServerlessError> {
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+        .await
+        .map_err(ServerlessError::ConfigFileDelete)?;
+    Ok(())
+}
