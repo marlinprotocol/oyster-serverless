@@ -19,9 +19,6 @@ struct Args {
     #[clap(long, value_parser, default_value = "./runtime/")]
     runtime_path: String,
 
-    #[clap(long, value_parser, default_value = "2")]
-    cgroup_version: u8,
-
     #[clap(long, value_parser, default_value = "www.marlin.org")]
     gateway: String,
 }
@@ -43,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
 
     let port: u16 = cli.port;
 
-    let cgroup_version: u8 = cli.cgroup_version;
+    let cgroup_version = 2u8;
 
     let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
     if cgroup_list.is_empty() {
