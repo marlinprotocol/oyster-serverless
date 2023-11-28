@@ -1,4 +1,5 @@
 use actix_web::{web, App, HttpServer};
+use anyhow::{anyhow, Context};
 use clap::Parser;
 
 use serverless::cgroups::Cgroups;
@@ -35,17 +36,15 @@ async fn main() -> anyhow::Result<()> {
 
     let port: u16 = cli.port;
 
-    let cgroup_version = 2u8;
-
-    let cgroup_list = serverless::get_cgroup_list(cgroup_version).unwrap();
-    if cgroup_list.is_empty() {
-        log::error!("No cgroups found. Make sure you have generated cgroups on your system by following the instructions in the readme file.");
-        std::process::exit(1);
+    let cgroups = Cgroups::new().context("failed to construct cgroups")?;
+    if cgroups.free.is_empty() {
+        return Err(anyhow!("no cgroups found, make sure you have generated cgroups on your system using instructions in the readme"));
     }
 
     let app_data = web::Data::new(AppState {
-        cgroup_list: cgroup_list.clone(),
-        cgroup_version,
+        cgroups,
+        cgroup_list: vec![],
+        cgroup_version: 2,
         running: Mutex::new(true),
         runtime_path: cli.runtime_path,
     });
@@ -53,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(app_data.clone())
-            .configure(handler::config)
+            .configure(serverless::handler::config)
     })
     .bind(("0.0.0.0", port))
     .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
