@@ -19,8 +19,7 @@ async fn serverless(
     jsonbody: web::Json<RequestBody>,
     appstate: web::Data<AppState>,
 ) -> impl Responder {
-    log::info!("*********NEW**REQUEST*******");
-    // Validation for the request json body
+    // check if the server is draining
     let current_running = appstate.running.lock().unwrap();
 
     if !*current_running {
@@ -29,9 +28,8 @@ async fn serverless(
             .body("Worker Unregistered");
     }
 
+    // validate request body
     if let Err(err) = jsonbody.validate() {
-        println!("here");
-        log::error!("{}", err);
         return response(
             None,
             None,
@@ -43,7 +41,7 @@ async fn serverless(
     }
 
     let workerd_runtime_path = appstate.runtime_path.clone();
-    let tx_hash = jsonbody.tx_hash.as_ref().unwrap();
+    let tx_hash = &jsonbody.tx_hash;
 
     //Creating a unique file name for the output file
     let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
@@ -194,7 +192,7 @@ async fn serverless(
     //Run the workerd runtime with generated files
 
     let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
-    
+
     // let wrkr = match workerd {
     //     Ok(child) => child,
     //     Err(e) => {
@@ -208,13 +206,12 @@ async fn serverless(
     //         );
     //     }
     // };
-    
+
     // if let Some(wrkr_err) = wrkr.stderr {
     //     println!("{:?}", wrkr_err);
     // };
-    
-    
-    if workerd.is_err() {    
+
+    if workerd.is_err() {
         let workerd_error = workerd.err();
         log::error!("Error running the workerd runtime: {:?}", workerd_error);
         return response(
