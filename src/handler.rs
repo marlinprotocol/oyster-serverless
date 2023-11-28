@@ -6,7 +6,7 @@ use crate::{
 
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
@@ -69,12 +69,8 @@ async fn serverless(
         // cleanup
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up code file")
-                )
-            });
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         return match err {
             cgroups::CgroupsError::NoFree => {
@@ -98,12 +94,8 @@ async fn serverless(
         appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up code file")
-                )
-            });
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         return match err {
             workerd::ServerlessError::BadPort(_) => {
@@ -126,12 +118,8 @@ async fn serverless(
         appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up code file")
-                )
-            });
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         use workerd::ServerlessError::*;
         return match err {
@@ -161,21 +149,13 @@ async fn serverless(
         // cleanup
         workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up config file")
-                )
-            });
+            .context("CRITICAL: failed to clean up config file")
+            .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up code file")
-                )
-            });
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         return HttpResponse::BadRequest().body(format!(
             "{:?}",
@@ -189,29 +169,19 @@ async fn serverless(
 
     if !res {
         // cleanup
-        child.kill().unwrap_or_else(|err| {
-            println!(
-                "{:?}",
-                anyhow!(err).context("CRITICAL: failed to kill worker {cgroup}")
-            )
-        });
+        child
+            .kill()
+            .context("CRITICAL: failed to kill worker {cgroup}")
+            .unwrap_or_else(|err| println!("{err:?}"));
         workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up config file")
-                )
-            });
+            .context("CRITICAL: failed to clean up config file")
+            .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
-            .unwrap_or_else(|err| {
-                println!(
-                    "{:?}",
-                    anyhow!(err).context("CRITICAL: failed to clean up code file")
-                )
-            });
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         let stderr = child.stderr.take().unwrap();
         let reader = BufReader::new(stderr);
@@ -236,29 +206,19 @@ async fn serverless(
     .await;
 
     // cleanup
-    child.kill().unwrap_or_else(|err| {
-        println!(
-            "{:?}",
-            anyhow!(err).context("CRITICAL: failed to kill worker {cgroup}")
-        )
-    });
+    child
+        .kill()
+        .context("CRITICAL: failed to kill worker {cgroup}")
+        .unwrap_or_else(|err| println!("{err:?}"));
     workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
         .await
-        .unwrap_or_else(|err| {
-            println!(
-                "{:?}",
-                anyhow!(err).context("CRITICAL: failed to clean up config file")
-            )
-        });
+        .context("CRITICAL: failed to clean up config file")
+        .unwrap_or_else(|err| println!("{err:?}"));
     appstate.cgroups.lock().unwrap().release(cgroup);
     workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
         .await
-        .unwrap_or_else(|err| {
-            println!(
-                "{:?}",
-                anyhow!(err).context("CRITICAL: failed to clean up code file")
-            )
-        });
+        .context("CRITICAL: failed to clean up code file")
+        .unwrap_or_else(|err| println!("{err:?}"));
 
     if let Err(err) = response {
         return HttpResponse::RequestTimeout()
