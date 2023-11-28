@@ -1,4 +1,5 @@
 use std::process::Child;
+use std::time::{Duration, Instant};
 
 use thiserror::Error;
 
@@ -6,6 +7,8 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+use tokio::time::sleep;
 
 use crate::cgroups::{Cgroups, CgroupsError};
 
@@ -177,4 +180,16 @@ async fn terminate(
         .map_err(ServerlessError::ConfigFileDelete)?;
 
     Ok(())
+}
+
+pub async fn wait_for_port(port: u16) -> bool {
+    let start_time = Instant::now();
+
+    while start_time.elapsed() < Duration::from_secs(1) {
+        match TcpStream::connect(format!("127.0.0.1:{}", port)).await {
+            Ok(_) => return true,
+            Err(_) => sleep(Duration::from_millis(1)).await,
+        }
+    }
+    false
 }
