@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
             .configure(serverless::handler::config)
     })
     .bind(("0.0.0.0", port))
-    .unwrap_or_else(|_| panic!("Can not bind to {}", &port))
+    .context(format!("could not bind to port {port}"))?
     .run();
 
     log::info!("Server started on port {}", port);
