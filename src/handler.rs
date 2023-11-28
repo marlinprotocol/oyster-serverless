@@ -178,135 +178,40 @@ async fn serverless(
     }
 
     // worker is ready, make the request
+    let response = timeout(
+        Duration::from_secs(5),
+        workerd::get_workerd_response(port, jsonbody.input),
+    )
+    .await;
 
-    // Wait for the port to bind
-    if res {
-        //Fetching the workerd response
-        let api_response_with_timeout = timeout(
-            Duration::from_secs(30),
-            get_workerd_response(free_port, jsonbody.input.as_ref().cloned()),
-        )
-        .await;
+    // cleanup
+    child.kill();
+    workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
+    appstate.cgroups.release(cgroup);
+    workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
-        let workerd_response_with_timeoutcheck = match api_response_with_timeout {
-            Ok(response) => response,
-            Err(err) => {
-                log::error!("workerd response error: {}", err);
-                log::error!("Failed to fetch response from workerd in 30sec");
-                return response(
-                    Some(&capnp_file_path),
-                    Some(&js_file_path),
-                    Some(workerd_process),
-                    None,
-                    "Server timeout, fetching response took a long time",
-                    StatusCode::REQUEST_TIMEOUT,
-                );
-            }
-        };
-
-        let workerd_response = match workerd_response_with_timeoutcheck {
-            Ok(res) => res,
-            Err(err) => {
-                log::error!("workerd response error: {}", err);
-                return response(
-                    Some(&capnp_file_path),
-                    Some(&js_file_path),
-                    Some(workerd_process),
-                    None,
-                    "Failed to generate the response",
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
-            }
-        };
-
-        if workerd_response.status() != reqwest::StatusCode::OK {
-            return response(
-                Some(&capnp_file_path),
-                Some(&js_file_path),
-                Some(workerd_process),
-                None,
-                "The server failed to retrieve a response. Please ensure that you have implemented appropriate exception handling in your JavaScript code.",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-
-        let workerd_json_response = workerd_response.text().await.unwrap();
-
-        log::info!("Generated response");
-        let execution_timer_end = Instant::now();
-        let execution_time = execution_timer_end
-            .duration_since(execution_timer_start)
-            .as_millis()
-            .to_string();
-        log::info!("Execution time: {}ms", execution_time);
-
-        response(
-            Some(&capnp_file_path),
-            Some(&js_file_path),
-            Some(workerd_process),
-            Some(Value::String(workerd_json_response)),
-            "Response successfully generated",
-            StatusCode::OK,
-        )
-    } else {
-        let stderr = workerd_process.stderr.take().unwrap();
-        let reader = BufReader::new(stderr);
-
-        let stderr_lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
-        let stderr_output = stderr_lines.join("\n");
-
-        if !stderr_output.is_empty() {
-            log::error!("Workerd execution error : {}", stderr_output);
-
-            if stderr_output.contains("SyntaxError") {
-                return response(
-                    Some(&capnp_file_path),
-                    Some(&js_file_path),
-                    None,
-                    Some(Value::String(stderr_output)),
-                    "Failed to generate a response. Syntax error in your JavaScript code. Please check the syntax and try again.",
-                    StatusCode::BAD_REQUEST,
-                );
-            }
-
-            return response(
-                Some(&capnp_file_path),
-                Some(&js_file_path),
-                None,
-                None,
-                "Failed to generate a response.",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-
-        let workerd_status = workerd_process.try_wait();
-        match workerd_status {
-            Ok(status) => {
-                let error_status = status.unwrap().to_string();
-                log::error!("Workerd execution error : {}", error_status);
-                if error_status == "signal: 9 (SIGKILL)" {
-                    return response(
-                        Some(&capnp_file_path),
-                        Some(&js_file_path),
-                        None,
-                        None,
-                        "The execution of the code has run out of memory.",
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                    );
-                }
-            }
-            Err(err) => log::error!("Error fetching workerd exit status : {}", err),
-        }
-
-        response(
-            Some(&capnp_file_path),
-            Some(&js_file_path),
-            None,
-            None,
-            "Failed to generate a response.",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        )
+    if let Err(err) = response {
+        return HttpResponse::RequestTimeout()
+            .body(format!("{:?}", anyhow!(err).context("worker timed out")));
     }
+    let response = response.unwrap();
+
+    if let Err(err) = response {
+        return HttpResponse::InternalServerError().body(format!(
+            "{:?}",
+            anyhow!(err).context("failed to get a response")
+        ));
+    }
+    let response = response.unwrap();
+
+    let execution_timer_end = Instant::now();
+    let execution_time = execution_timer_end
+        .duration_since(execution_timer_start)
+        .as_millis()
+        .to_string();
+    log::info!("Execution time: {}ms", execution_time);
+
+    return HttpResponse::build(response.status()).body(response.bytes().await.unwrap_or_default());
 }
 
 #[get("/unregister")]
