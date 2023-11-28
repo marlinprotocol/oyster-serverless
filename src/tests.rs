@@ -1,32 +1,20 @@
 #[cfg(test)]
 pub mod serverlesstest {
-
+    use crate::cgroups::Cgroups;
+    use crate::handler;
     use crate::model::AppState;
-    use crate::{handler, serverless};
     use actix_web::{http, test, web, App};
     use serde_json::json;
-    use std::sync::Mutex;
-    use clap::Parser;
-
-
-    use crate::Args;
+    use std::sync::atomic::AtomicBool;
 
     #[actix_web::test]
     async fn valid_input_test() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -44,25 +32,18 @@ pub mod serverlesstest {
             .to_request();
 
         let resp = test::call_service(&app, req).await;
+        println!("{:?}", resp.response().body());
         assert_eq!(resp.status(), http::StatusCode::OK);
     }
 
     #[actix_web::test]
     async fn interacting_with_wrong_smartcontract() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -87,20 +68,12 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_txhash() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -125,20 +98,12 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn txhash_not_provided() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -158,20 +123,12 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_js_code_in_calldata() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -196,20 +153,12 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_payload_test() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
@@ -231,20 +180,12 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn response_timeout_test() {
-        let cli = Args::parse();
-        let cgroup_list = serverless::get_cgroup_list(cli.cgroup_version).unwrap();
-        if cgroup_list.is_empty() {
-            log::error!("No cgroups found. Make sure you have set up cgroups on your system by following the instructions in the readme file.");
-            std::process::exit(1);
-        }
-
         let app = test::init_service(
             App::new()
                 .app_data(web::Data::new(AppState {
-                    cgroup_list: cgroup_list.clone(),
-                    cgroup_version: cli.cgroup_version,
-                    running: Mutex::new(true),
-                    runtime_path: cli.runtime_path
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
                 }))
                 .configure(handler::config),
         )
