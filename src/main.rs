@@ -42,8 +42,6 @@ async fn main() -> anyhow::Result<()> {
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
-        cgroup_list: vec![],
-        cgroup_version: 2,
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
     });
