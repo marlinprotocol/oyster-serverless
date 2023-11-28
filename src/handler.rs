@@ -41,6 +41,7 @@ async fn serverless(
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
 
+    // create code file
     if let Err(err) = workerd::create_code_file(tx_hash, slug, workerd_runtime_path).await {
         use workerd::ServerlessError::*;
         return match err {
@@ -66,6 +67,7 @@ async fn serverless(
 
     let execution_timer_start = Instant::now();
 
+    // reserve cgroup
     let cgroup = appstate.cgroups.reserve();
     if let Err(err) = cgroup {
         return match err {
@@ -83,6 +85,7 @@ async fn serverless(
     }
     let cgroup = cgroup.unwrap();
 
+    // get port for cgroup
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
         return match err {
@@ -100,6 +103,7 @@ async fn serverless(
     }
     let port = port.unwrap();
 
+    // create config file
     if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
         use workerd::ServerlessError::*;
         return match err {
@@ -123,87 +127,16 @@ async fn serverless(
         };
     }
 
-    let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
-    let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
-
-    //Finding an available cgroup
-    let cgroup_list = &appstate.cgroup_list;
-    let available_cgroup = match find_available_cgroup(appstate.cgroup_version, cgroup_list) {
-        Ok(cgroup) => cgroup,
-        Err(e) => {
-            log::error!("{}", e);
-            return response(
-                Some(&capnp_file_path),
-                Some(&js_file_path),
-                None,
-                None,
-                "There was an error assigning resources to your function",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-
-    if available_cgroup == "No available cgroup" {
-        log::error!("No available cgroup to run workerd");
-        return response(
-            Some(&capnp_file_path),
-            Some(&js_file_path),
-            None,
-            None,
-            "Server busy",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        );
+    // start worker
+    let child = workerd::execute(tx_hash, slug, workerd_runtime_path, &cgroup).await;
+    if let Err(err) = child {
+        return HttpResponse::BadRequest().body(format!(
+            "{:?}",
+            anyhow!(err).context("failed to execute worker")
+        ));
     }
-    //Run the workerd runtime with generated files
+    let child = child.unwrap();
 
-    let workerd = run_workerd_runtime(&file_name, &workerd_runtime_path, &available_cgroup).await;
-
-    // let wrkr = match workerd {
-    //     Ok(child) => child,
-    //     Err(e) => {
-    //         return response(
-    //             Some(&capnp_file_path),
-    //             Some(&js_file_path),
-    //             None,
-    //             None,
-    //             "Error running the workerd runtime",
-    //             StatusCode::INTERNAL_SERVER_ERROR,
-    //         );
-    //     }
-    // };
-
-    // if let Some(wrkr_err) = wrkr.stderr {
-    //     println!("{:?}", wrkr_err);
-    // };
-
-    if workerd.is_err() {
-        let workerd_error = workerd.err();
-        log::error!("Error running the workerd runtime: {:?}", workerd_error);
-        return response(
-            Some(&capnp_file_path),
-            Some(&js_file_path),
-            None,
-            None,
-            "Error running the workerd runtime",
-            StatusCode::INTERNAL_SERVER_ERROR,
-        );
-    }
-
-    let mut workerd_process = match workerd {
-        Ok(data) => data,
-        Err(e) => {
-            log::error!("{}", e);
-            return response(
-                Some(&capnp_file_path),
-                Some(&js_file_path),
-                None,
-                None,
-                "Failed to execute the code",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-    // println!("{:?}", workerd_process);
     // Wait for the port to bind
     if wait_for_port(free_port) {
         //Fetching the workerd response
