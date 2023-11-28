@@ -39,10 +39,9 @@ impl Cgroups {
 
     pub fn execute(
         &mut self,
+        cgroup: String,
         args: impl IntoIterator<Item = impl AsRef<OsStr>>,
     ) -> Result<(Child, String), CgroupsError> {
-        let cgroup = self.reserve()?;
-
         let child = Command::new("sudo")
             .arg("/usr/bin/cgexec")
             .arg("-g")
