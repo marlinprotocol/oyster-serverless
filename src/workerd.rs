@@ -88,8 +88,8 @@ async fn create_code_file(
         _ => Err(ServerlessError::InvalidTxCalldataType),
     }?;
 
-    // decode calldata
-    let calldata = hex::decode(calldata)?;
+    // hex decode calldata by skipping to the code bytes
+    let calldata = hex::decode(&calldata[138..])?;
 
     // write calldata to file
     let mut file =
