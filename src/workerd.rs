@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 use crate::cgroups::{Cgroups, CgroupsError};
 
 #[derive(Error, Debug)]
-enum ServerlessError {
+pub enum ServerlessError {
     #[error("failed to retrieve calldata")]
     CalldataRetrieve(#[from] reqwest::Error),
     #[error("tx not found")]
@@ -59,7 +59,7 @@ async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
     Ok(json_response)
 }
 
-async fn create_code_file(
+pub async fn create_code_file(
     tx_hash: &str,
     slug: &str,
     workerd_runtime_path: &str,
@@ -104,7 +104,7 @@ async fn create_code_file(
     Ok(())
 }
 
-async fn create_config_file(
+pub async fn create_config_file(
     tx_hash: &str,
     slug: &str,
     workerd_runtime_path: &str,
@@ -135,7 +135,7 @@ const oysterWorker :Workerd.Worker = (
     Ok(())
 }
 
-fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
+pub fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
     u16::from_str_radix(&cgroup[8..], 10)
         .map(|x| x + 11000)
         .map_err(ServerlessError::BadPort)
