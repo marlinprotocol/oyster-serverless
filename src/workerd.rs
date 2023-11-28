@@ -124,7 +124,7 @@ const oysterConfig :Workerd.Config = (
 );
 
 const oysterWorker :Workerd.Worker = (
-  serviceWorkerScript = embed \"{tx_hash}.js\",
+  serviceWorkerScript = embed \"{tx_hash}-{slug}.js\",
   compatibilityDate = \"2022-09-16\",
 );"
     );
