@@ -1,3 +1,4 @@
+use crate::cgroups::Cgroups;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -19,6 +20,7 @@ pub struct RequestBody {
 }
 
 pub struct AppState {
+    pub cgroups: Cgroups,
     pub cgroup_list: Vec<String>,
     pub cgroup_version: u8,
     pub running: Mutex<bool>,
