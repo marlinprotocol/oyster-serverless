@@ -1,7 +1,7 @@
 use crate::cgroups::Cgroups;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicBool;
+use std::sync::{atomic::AtomicBool, Mutex};
 use validator::Validate;
 
 fn validate_hash(value: &str) -> Result<(), validator::ValidationError> {
@@ -20,7 +20,7 @@ pub struct RequestBody {
 }
 
 pub struct AppState {
-    pub cgroups: Cgroups,
+    pub cgroups: Mutex<Cgroups>,
     pub cgroup_list: Vec<String>,
     pub cgroup_version: u8,
     // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory

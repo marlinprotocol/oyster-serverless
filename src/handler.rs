@@ -64,7 +64,7 @@ async fn serverless(
     let execution_timer_start = Instant::now();
 
     // reserve cgroup
-    let cgroup = appstate.cgroups.reserve();
+    let cgroup = appstate.cgroups.lock().unwrap().reserve();
     if let Err(err) = cgroup {
         // cleanup
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
@@ -88,7 +88,7 @@ async fn serverless(
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
         // cleanup
-        appstate.cgroups.release(cgroup);
+        appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
         return match err {
@@ -109,7 +109,7 @@ async fn serverless(
     // create config file
     if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
         // cleanup
-        appstate.cgroups.release(cgroup);
+        appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
         use workerd::ServerlessError::*;
@@ -139,7 +139,7 @@ async fn serverless(
     if let Err(err) = child {
         // cleanup
         workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
-        appstate.cgroups.release(cgroup);
+        appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
         return HttpResponse::BadRequest().body(format!(
@@ -156,7 +156,7 @@ async fn serverless(
         // cleanup
         child.kill();
         workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
-        appstate.cgroups.release(cgroup);
+        appstate.cgroups.lock().unwrap().release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
         let stderr = child.stderr.take().unwrap();
@@ -183,7 +183,7 @@ async fn serverless(
     // cleanup
     child.kill();
     workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
-    appstate.cgroups.release(cgroup);
+    appstate.cgroups.lock().unwrap().release(cgroup);
     workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
 
     if let Err(err) = response {
