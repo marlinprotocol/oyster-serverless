@@ -147,6 +147,7 @@ async fn execute(
     slug: &str,
     workerd_runtime_path: &str,
     cgroups: &mut Cgroups,
+    cgroup: String,
 ) -> Result<(Child, String), ServerlessError> {
     let args = [
         &(workerd_runtime_path.to_owned() + "/workerd"),
@@ -155,7 +156,7 @@ async fn execute(
         "--verbose",
     ];
 
-    Ok(cgroups.execute(args)?)
+    Ok(cgroups.execute(cgroup, args)?)
 }
 
 async fn terminate(
