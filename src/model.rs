@@ -3,10 +3,18 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 use validator::Validate;
 
+fn validate_hash(value: &str) -> Result<(), validator::ValidationError> {
+    if &value[0..2] == "0x" && value[2..].as_bytes().iter().all(|x| x.is_ascii_hexdigit()) {
+        Ok(())
+    } else {
+        Err(validator::ValidationError::new("invalid hex string"))
+    }
+}
+
 #[derive(Debug, Validate, Deserialize)]
 pub struct RequestBody {
-    #[validate(length(min = 1), required)]
-    pub tx_hash: Option<String>,
+    #[validate(length(equal = 66), custom = "validate_hash")]
+    pub tx_hash: String,
     pub input: Option<HashMap<String, serde_json::Value>>,
 }
 
