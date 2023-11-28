@@ -147,7 +147,7 @@ async fn execute(
     slug: &str,
     workerd_runtime_path: &str,
     cgroup: String,
-) -> Result<(Child, String), ServerlessError> {
+) -> Result<Child, ServerlessError> {
     let args = [
         &(workerd_runtime_path.to_owned() + "/workerd"),
         "serve",

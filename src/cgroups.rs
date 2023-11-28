@@ -40,7 +40,7 @@ impl Cgroups {
     pub fn execute(
         cgroup: String,
         args: impl IntoIterator<Item = impl AsRef<OsStr>>,
-    ) -> Result<(Child, String), CgroupsError> {
+    ) -> Result<Child, CgroupsError> {
         let child = Command::new("sudo")
             .arg("/usr/bin/cgexec")
             .arg("-g")
@@ -50,7 +50,7 @@ impl Cgroups {
             .spawn()
             .map_err(CgroupsError::Execute)?;
 
-        Ok((child, cgroup))
+        Ok(child)
     }
 }
 
