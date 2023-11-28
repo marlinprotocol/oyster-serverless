@@ -142,11 +142,11 @@ pub fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
 }
 
 // TODO: timeouts?
-async fn execute(
+pub async fn execute(
     tx_hash: &str,
     slug: &str,
     workerd_runtime_path: &str,
-    cgroup: String,
+    cgroup: &str,
 ) -> Result<Child, ServerlessError> {
     let args = [
         &(workerd_runtime_path.to_owned() + "/workerd"),

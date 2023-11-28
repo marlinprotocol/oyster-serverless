@@ -38,13 +38,13 @@ impl Cgroups {
     }
 
     pub fn execute(
-        cgroup: String,
+        cgroup: &str,
         args: impl IntoIterator<Item = impl AsRef<OsStr>>,
     ) -> Result<Child, CgroupsError> {
         let child = Command::new("sudo")
             .arg("/usr/bin/cgexec")
             .arg("-g")
-            .arg("memory:".to_string() + &cgroup)
+            .arg("memory:".to_string() + cgroup)
             .args(args)
             .stderr(Stdio::piped())
             .spawn()
