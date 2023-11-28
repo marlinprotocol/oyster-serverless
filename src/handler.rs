@@ -22,8 +22,8 @@ async fn serverless(
 ) -> impl Responder {
     // check if the server is draining
     // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
-    // not even with writes to the same atomic (we just serve a few more requests at worst)
-    // be very careful adding more operations associated with draining states
+    // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
+    // be very careful adding more operations associated with the draining state
     if !appstate.running.load(Ordering::Relaxed) {
         return HttpResponse::Gone().body("worker unregistered");
     }
@@ -371,17 +371,14 @@ async fn serverless(
 
 #[get("/unregister")]
 async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
-    let mut current_running = appstate.running.lock().unwrap();
+    // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
+    // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
+    // be very careful adding more operations associated with the draining state
+    appstate.running.store(false, Ordering::Relaxed);
 
-    if *current_running {
-        *current_running = false;
-
-        return HttpResponse::Ok().status(StatusCode::OK).body("SUCCESS");
-    } else {
-        return HttpResponse::NotFound()
-            .status(StatusCode::NOT_FOUND)
-            .finish();
-    }
+    return HttpResponse::Ok()
+        .status(StatusCode::OK)
+        .body("successfully set server in draining state");
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {

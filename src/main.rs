@@ -18,7 +18,6 @@ struct Args {
     #[clap(long, value_parser, default_value = "www.marlin.org")]
     gateway: String,
 }
-use std::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -45,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         cgroups,
         cgroup_list: vec![],
         cgroup_version: 2,
-        running: Mutex::new(true),
+        running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
     });
 

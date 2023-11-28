@@ -24,7 +24,7 @@ pub struct AppState {
     pub cgroup_list: Vec<String>,
     pub cgroup_version: u8,
     // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
-    // not even with writes to the same atomic (we just serve a few more requests at worst)
+    // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
     // be very careful adding more operations associated with the draining state
     pub running: AtomicBool,
     pub runtime_path: String,
