@@ -6,6 +6,7 @@ use crate::{
 
 use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
+use anyhow::{anyhow, Context};
 use serde_json::Value;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
@@ -30,7 +31,8 @@ async fn serverless(
 
     // validate request body
     if let Err(err) = jsonbody.validate() {
-        return HttpResponse::BadRequest().body(format!("invalid payload: {err:?}"));
+        return HttpResponse::BadRequest()
+            .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
     let workerd_runtime_path = appstate.runtime_path.clone();
