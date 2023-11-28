@@ -35,6 +35,8 @@ enum ServerlessError {
     CodeFileDelete(#[source] tokio::io::Error),
     #[error("failed to delete config file")]
     ConfigFileDelete(#[source] tokio::io::Error),
+    #[error("failed to retrieve port from cgroup")]
+    BadPort(#[source] std::num::ParseIntError),
 }
 
 async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
@@ -131,6 +133,10 @@ const oysterWorker :Workerd.Worker = (
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
     Ok(())
+}
+
+fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
+    u16::from_str_radix(&cgroup[8..], 10).map_err(ServerlessError::BadPort)
 }
 
 // TODO: timeouts?
