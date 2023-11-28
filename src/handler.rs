@@ -2,6 +2,7 @@ use crate::{
     model::{AppState, RequestBody},
     response::response,
     serverless::*,
+    workerd,
 };
 
 use actix_web::http::StatusCode;
@@ -35,53 +36,31 @@ async fn serverless(
             .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
-    let workerd_runtime_path = appstate.runtime_path.clone();
     let tx_hash = &jsonbody.tx_hash;
+    let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
+    let workerd_runtime_path = &appstate.runtime_path;
 
-    //Creating a unique file name for the output file
-    let file_name = tx_hash.to_string() + &Uuid::new_v4().to_string();
-
-    //Fetching the transaction data using the transaction hash and decoding the calldata
-    let json_response = match get_transaction_data(tx_hash).await {
-        Ok(data) => data,
-        Err(e) => {
-            log::error!("Error : {}", e);
-            return response(
-                None,
-                None,
-                None,
-                None,
-                "Error fetching transacton data",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-
-    let call_data = json_response["result"]["input"].to_string();
-    let contract_address = json_response["result"]["to"].to_string();
-
-    //Checking if the contract address is correct
-    if contract_address != "\"0x30694a76d737211a908d0dd672f47e1d29fbfb02\"" {
-        return response(
-            None,
-            None,
-            None,
-            None,
-            "Please make sure you are interacting with the correct contract : 0x30694a76d737211a908d0dd672f47e1d29fbfb02",
-            StatusCode::BAD_REQUEST,
-        );
-    }
-
-    //Checking if the call data is null
-    if call_data == "null" {
-        return response(
-            None,
-            None,
-            None,
-            None,
-            "Error fetching the call data, make sure a valid tx_hash is provided",
-            StatusCode::BAD_REQUEST,
-        );
+    if let Err(err) = workerd::create_code_file(tx_hash, slug, workerd_runtime_path).await {
+        use workerd::ServerlessError::*;
+        return match err {
+            CalldataRetrieve(_)
+            | TxNotFound
+            | InvalidTxToType
+            | InvalidTxToValue(_, _)
+            | InvalidTxCalldataType
+            | BadCalldata(_) => HttpResponse::BadRequest().body(format!(
+                "{:?}",
+                anyhow!(err).context("failed to create code file")
+            )),
+            CodeFileCreate(_) => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("failed to create code file")
+            )),
+            _ => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("unexpected error while trying to create code file")
+            )),
+        };
     }
 
     let execution_timer_start = Instant::now();
