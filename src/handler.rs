@@ -30,14 +30,7 @@ async fn serverless(
 
     // validate request body
     if let Err(err) = jsonbody.validate() {
-        return response(
-            None,
-            None,
-            None,
-            Some(Value::String(err.to_string())),
-            "Invalid payload",
-            StatusCode::BAD_REQUEST,
-        );
+        return HttpResponse::BadRequest().body(format!("invalid payload: {err:?}"));
     }
 
     let workerd_runtime_path = appstate.runtime_path.clone();
