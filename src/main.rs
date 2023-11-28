@@ -27,8 +27,8 @@ struct Args {
 }
 use std::sync::Mutex;
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let cli = Args::parse();
 
     // let gateway_url = cli.gateway;
@@ -69,5 +69,7 @@ async fn main() -> std::io::Result<()> {
 
     log::info!("Server started on port {}", port);
 
-    server.await
+    server.await?;
+
+    Ok(())
 }
