@@ -98,12 +98,8 @@ pub async fn create_code_file(
     let mut calldata = hex::decode(&calldata[138..])?;
 
     // strip trailing zeros
-    let idx = calldata
-        .iter()
-        .rev()
-        .position(|x| *x != 0)
-        .unwrap_or(calldata.len() - 1);
-    calldata.truncate(idx + 1);
+    let idx = calldata.iter().rev().position(|x| *x != 0).unwrap_or(0);
+    calldata.truncate(calldata.len() - idx);
 
     // write calldata to file
     let mut file =
