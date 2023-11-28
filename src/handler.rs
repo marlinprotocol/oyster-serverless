@@ -8,6 +8,7 @@ use actix_web::http::StatusCode;
 use actix_web::{get, post, web, HttpResponse, Responder};
 use serde_json::Value;
 use std::io::{BufRead, BufReader};
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::time::timeout;
@@ -20,8 +21,10 @@ async fn serverless(
     appstate: web::Data<AppState>,
 ) -> impl Responder {
     // check if the server is draining
-    let is_running = appstate.running.lock().unwrap();
-    if !*is_running {
+    // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
+    // not even with writes to the same atomic (we just serve a few more requests at worst)
+    // be very careful adding more operations associated with draining states
+    if !appstate.running.load(Ordering::Relaxed) {
         return HttpResponse::Gone().body("worker unregistered");
     }
 
