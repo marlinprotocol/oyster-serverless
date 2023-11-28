@@ -162,27 +162,6 @@ pub async fn execute(
     Ok(Cgroups::execute(cgroup, args)?)
 }
 
-async fn terminate(
-    tx_hash: &str,
-    slug: &str,
-    workerd_runtime_path: &str,
-    cgroups: &mut Cgroups,
-    child: &mut Child,
-    cgroup: String,
-) -> Result<(), ServerlessError> {
-    child.kill().map_err(ServerlessError::Terminate)?;
-    cgroups.release(cgroup);
-
-    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
-        .await
-        .map_err(ServerlessError::CodeFileDelete)?;
-    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
-        .await
-        .map_err(ServerlessError::ConfigFileDelete)?;
-
-    Ok(())
-}
-
 pub async fn wait_for_port(port: u16) -> bool {
     let start_time = Instant::now();
 
