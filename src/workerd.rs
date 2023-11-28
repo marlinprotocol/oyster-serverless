@@ -95,7 +95,15 @@ pub async fn create_code_file(
     }?;
 
     // hex decode calldata by skipping to the code bytes
-    let calldata = hex::decode(&calldata[138..])?;
+    let mut calldata = hex::decode(&calldata[138..])?;
+
+    // strip trailing zeros
+    let idx = calldata
+        .iter()
+        .rev()
+        .position(|x| *x != 0)
+        .unwrap_or(calldata.len() - 1);
+    calldata.truncate(idx + 1);
 
     // write calldata to file
     let mut file =
