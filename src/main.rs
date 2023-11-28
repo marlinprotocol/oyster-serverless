@@ -1,13 +1,8 @@
-mod handler;
-mod model;
-mod response;
-mod serverless;
-mod tests;
-
-use crate::model::AppState;
 use actix_web::{web, App, HttpServer};
-
 use clap::Parser;
+
+use serverless::cgroups::Cgroups;
+use serverless::model::AppState;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
