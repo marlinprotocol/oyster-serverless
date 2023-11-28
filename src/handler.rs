@@ -153,8 +153,34 @@ async fn serverless(
     }
     let child = child.unwrap();
 
+    // wait for worker to be available
+    let res = workerd::wait_for_port(port).await;
+
+    if !res {
+        // cleanup
+        child.kill();
+        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path).await;
+        appstate.cgroups.release(cgroup);
+        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path).await;
+
+        let stderr = child.stderr.take().unwrap();
+        let reader = BufReader::new(stderr);
+        let stderr_lines: Vec<String> = reader.lines().map(|l| l.unwrap()).collect();
+        let stderr_output = stderr_lines.join("\n");
+
+        if stderr_output != "" && stderr_output.contains("SyntaxError") {
+            return HttpResponse::BadRequest()
+                .body(format!("syntax error in the code: {stderr_output}"));
+        }
+
+        return HttpResponse::InternalServerError()
+            .body(format!("failed to execute worker: {stderr_output}"));
+    }
+
+    // worker is ready, make the request
+
     // Wait for the port to bind
-    if wait_for_port(free_port) {
+    if res {
         //Fetching the workerd response
         let api_response_with_timeout = timeout(
             Duration::from_secs(30),
