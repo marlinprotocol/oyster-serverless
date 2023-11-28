@@ -38,7 +38,6 @@ impl Cgroups {
     }
 
     pub fn execute(
-        &mut self,
         cgroup: String,
         args: impl IntoIterator<Item = impl AsRef<OsStr>>,
     ) -> Result<(Child, String), CgroupsError> {

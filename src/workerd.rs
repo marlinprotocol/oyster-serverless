@@ -146,7 +146,6 @@ async fn execute(
     tx_hash: &str,
     slug: &str,
     workerd_runtime_path: &str,
-    cgroups: &mut Cgroups,
     cgroup: String,
 ) -> Result<(Child, String), ServerlessError> {
     let args = [
@@ -156,7 +155,7 @@ async fn execute(
         "--verbose",
     ];
 
-    Ok(cgroups.execute(cgroup, args)?)
+    Ok(Cgroups::execute(cgroup, args)?)
 }
 
 async fn terminate(
