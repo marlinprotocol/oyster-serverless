@@ -16,7 +16,7 @@ use validator::Validate;
 
 #[post("/serverless")]
 async fn serverless(
-    jsonbody: web::Json<RequestBody>,
+    mut jsonbody: web::Json<RequestBody>,
     appstate: web::Data<AppState>,
 ) -> impl Responder {
     // check if the server is draining
@@ -33,7 +33,7 @@ async fn serverless(
             .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
-    let tx_hash = &jsonbody.tx_hash;
+    let tx_hash = &jsonbody.tx_hash.split_off(0);
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
 
@@ -147,7 +147,7 @@ async fn serverless(
             anyhow!(err).context("failed to execute worker")
         ));
     }
-    let child = child.unwrap();
+    let mut child = child.unwrap();
 
     // wait for worker to be available
     let res = workerd::wait_for_port(port).await;
@@ -174,9 +174,10 @@ async fn serverless(
     }
 
     // worker is ready, make the request
+    let jsonbody_input = jsonbody.input.take();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, jsonbody.input),
+        workerd::get_workerd_response(port, jsonbody_input),
     )
     .await;
 
@@ -198,7 +199,7 @@ async fn serverless(
             anyhow!(err).context("failed to get a response")
         ));
     }
-    let response = response.unwrap();
+    let mut response = response.unwrap();
 
     let execution_timer_end = Instant::now();
     let execution_time = execution_timer_end
@@ -207,10 +208,11 @@ async fn serverless(
         .to_string();
     log::info!("Execution time: {}ms", execution_time);
 
+    let status = response.status();
     return response
         .headers_mut()
         .into_iter()
-        .fold(HttpResponse::build(response.status()), |resp, header| {
+        .fold(HttpResponse::build(status), |mut resp, header| {
             resp.append_header((header.0.clone(), header.1.clone()));
             resp
         })
