@@ -1,4 +1,5 @@
 use crate::{
+    cgroups,
     model::{AppState, RequestBody},
     response::response,
     serverless::*,
@@ -65,72 +66,62 @@ async fn serverless(
 
     let execution_timer_start = Instant::now();
 
-    let decoded_calldata = match decode_call_data(&call_data) {
-        Ok(data) => data,
-        Err(e) => {
-            log::error!("{}", e);
-            return response(
-                None,
-                None,
-                None,
-                None,
-                "Error decoding the call data",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-
-    //Fetching a free port
-    let free_port = get_free_port();
-    log::info!("Free port: {}", &free_port);
-
-    //Generating the js and capnp file
-    let js_file = create_js_file(&decoded_calldata, &file_name, &workerd_runtime_path).await;
-
-    match js_file {
-        Ok(_) => {
-            log::info!("JS file generated.")
-        }
-        Err(e) => {
-            log::error!("Error : {}", e);
-            return response(
-                None,
-                None,
-                None,
-                None,
-                "Error generating the JS file",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
-    };
-
-    let capnp_file = create_capnp_file(&file_name, free_port, &workerd_runtime_path).await;
-
-    match capnp_file {
-        Ok(_) => {
-            log::info!("Config file generated.")
-        }
-        Err(e) => {
-            log::error!("Error : {}", e);
-            return response(
-                None,
-                None,
-                None,
-                None,
-                "Error generating the configuration file.",
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
-        }
+    let cgroup = appstate.cgroups.reserve();
+    if let Err(err) = cgroup {
+        return match err {
+            cgroups::CgroupsError::NoFree => {
+                return HttpResponse::TooManyRequests().body(format!(
+                    "{:?}",
+                    anyhow!("no free cgroup available to run request")
+                ))
+            }
+            _ => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("unexpected error while trying to reserve cgroup")
+            )),
+        };
     }
+    let cgroup = cgroup.unwrap();
 
-    // return response(
-    //     None,
-    //     None,
-    //     None,
-    //     None,
-    //     "Error generating the configuration file.",
-    //     StatusCode::INTERNAL_SERVER_ERROR,
-    // );
+    let port = workerd::get_port(&cgroup);
+    if let Err(err) = port {
+        return match err {
+            workerd::ServerlessError::BadPort(_) => {
+                return HttpResponse::InternalServerError().body(format!(
+                    "{:?}",
+                    anyhow!(err).context("failed to get port for cgroup")
+                ))
+            }
+            _ => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("unexpected error while trying to get port for cgroup")
+            )),
+        };
+    }
+    let port = port.unwrap();
+
+    if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
+        use workerd::ServerlessError::*;
+        return match err {
+            CalldataRetrieve(_)
+            | TxNotFound
+            | InvalidTxToType
+            | InvalidTxToValue(_, _)
+            | InvalidTxCalldataType
+            | BadCalldata(_) => HttpResponse::BadRequest().body(format!(
+                "{:?}",
+                anyhow!(err).context("failed to create code file")
+            )),
+            CodeFileCreate(_) => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("failed to create code file")
+            )),
+            _ => HttpResponse::InternalServerError().body(format!(
+                "{:?}",
+                anyhow!(err).context("unexpected error while trying to create code file")
+            )),
+        };
+    }
 
     let js_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".js";
     let capnp_file_path = workerd_runtime_path.to_string() + &file_name.to_string() + ".capnp";
