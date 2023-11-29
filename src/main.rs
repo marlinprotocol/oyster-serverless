@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .app_data(app_data.clone())
-            .configure(serverless::handler::config)
+            .default_service(web::to(serverless::handler::serverless))
     })
     .bind(("0.0.0.0", port))
     .context(format!("could not bind to port {port}"))?

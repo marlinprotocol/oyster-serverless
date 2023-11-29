@@ -9,8 +9,7 @@ use std::time::Duration;
 use std::time::Instant;
 use tokio::time::timeout;
 
-#[post("/")]
-async fn serverless(
+pub async fn serverless(
     body: web::Bytes,
     appstate: web::Data<AppState>,
     req: HttpRequest,
@@ -264,8 +263,4 @@ async fn serverless(
             resp
         })
         .body(response.bytes().await.unwrap_or_default());
-}
-
-pub fn config(conf: &mut web::ServiceConfig) {
-    conf.service(serverless);
 }
