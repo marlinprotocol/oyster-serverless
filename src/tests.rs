@@ -25,9 +25,7 @@ pub mod serverlesstest {
         )
         .await;
         let valid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
@@ -58,9 +56,7 @@ pub mod serverlesstest {
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
@@ -91,9 +87,7 @@ pub mod serverlesstest {
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
@@ -149,9 +143,7 @@ pub mod serverlesstest {
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 100
-            }
+            "num": 100
         });
 
         let req = test::TestRequest::post()
