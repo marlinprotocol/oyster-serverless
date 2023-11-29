@@ -21,7 +21,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
         let valid_payload = json!({
@@ -51,7 +51,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
@@ -82,7 +82,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
@@ -113,7 +113,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
@@ -138,7 +138,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
@@ -169,7 +169,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
@@ -198,7 +198,7 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
