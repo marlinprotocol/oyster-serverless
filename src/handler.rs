@@ -1,22 +1,18 @@
-use crate::{
-    cgroups,
-    model::{AppState, RequestBody},
-    workerd,
-};
+use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
 use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::time::timeout;
-use validator::Validate;
 
 #[post("/serverless")]
 async fn serverless(
-    mut jsonbody: web::Json<RequestBody>,
+    web::Json(jsonbody): web::Json<Option<HashMap<String, serde_json::Value>>>,
     appstate: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -26,12 +22,6 @@ async fn serverless(
     // be very careful adding more operations associated with the draining state
     if !appstate.running.load(Ordering::Relaxed) {
         return HttpResponse::Gone().body("worker unregistered");
-    }
-
-    // validate request body
-    if let Err(err) = jsonbody.validate() {
-        return HttpResponse::BadRequest()
-            .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
     // get the host header value
@@ -212,10 +202,9 @@ async fn serverless(
     }
 
     // worker is ready, make the request
-    let jsonbody_input = jsonbody.input.take();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, jsonbody_input),
+        workerd::get_workerd_response(port, jsonbody),
     )
     .await;
 

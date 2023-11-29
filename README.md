@@ -45,7 +45,7 @@ CGROUP_VERSION=2
 <b>Run the serverless application :</b>
 
 ```
-cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust
+cargo build --release && sudo ./target/release/oyster-serverless
 ```
 
 <b>Make a request to the serveless application :</b>
@@ -53,16 +53,13 @@ cargo build --release && sudo ./target/x86_64-unknown-linux-musl/release/serverl
 This transaction hash contains the JavaScript code that finds the prime factors of a given number :
 <a href="https://goerli.arbiscan.io/tx/0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113">0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113</a>
 
-Endpoint (POST) : `http://localhost:6000/api/serverless`
+Endpoint (POST) : `http://<TxHash>.localhost:6000/api/serverless`
 
 JSON body :
 
 ```
 {
-    "tx_hash":"0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113",
-    "input": {
-        "num":10
-    }
+    "num":10
 }
 ```
 </br>
