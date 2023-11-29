@@ -14,7 +14,7 @@ use std::time::Instant;
 use tokio::time::timeout;
 use validator::Validate;
 
-#[post("/serverless")]
+#[post("/")]
 async fn serverless(
     mut jsonbody: web::Json<RequestBody>,
     appstate: web::Data<AppState>,
