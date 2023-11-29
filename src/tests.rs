@@ -43,6 +43,36 @@ pub mod serverlesstest {
     }
 
     #[actix_web::test]
+    async fn valid_input_different_url_test() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
+                }))
+                .default_service(web::to(handler::serverless)),
+        )
+        .await;
+        let valid_payload = json!({
+            "num": 10
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/serverless")
+            .append_header((
+                "Host",
+                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+            ))
+            .set_json(&valid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+
+    #[actix_web::test]
     async fn interacting_with_wrong_smartcontract() {
         let app = test::init_service(
             App::new()
