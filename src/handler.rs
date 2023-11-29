@@ -5,7 +5,7 @@ use crate::{
 };
 
 use actix_web::http::{header, StatusCode};
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
@@ -47,6 +47,18 @@ async fn serverless(
 
     // get tx hash by splitting, will always have at least one element
     let tx_hash = host_header.split('.').next().unwrap();
+
+    // handle unregister here
+    if tx_hash == "unregister" {
+        // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
+        // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
+        // be very careful adding more operations associated with the draining state
+        appstate.running.store(false, Ordering::Relaxed);
+
+        return HttpResponse::Ok()
+            .status(StatusCode::OK)
+            .body("successfully set server in draining state");
+    }
 
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
@@ -266,19 +278,6 @@ async fn serverless(
         .body(response.bytes().await.unwrap_or_default());
 }
 
-#[get("/unregister")]
-async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
-    // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
-    // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
-    // be very careful adding more operations associated with the draining state
-    appstate.running.store(false, Ordering::Relaxed);
-
-    return HttpResponse::Ok()
-        .status(StatusCode::OK)
-        .body("successfully set server in draining state");
-}
-
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("").service(serverless).service(unregister);
-    conf.service(scope);
+    conf.service(serverless);
 }
