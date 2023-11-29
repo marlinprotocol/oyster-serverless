@@ -279,6 +279,6 @@ async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
 }
 
 pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api").service(serverless).service(unregister);
+    let scope = web::scope("").service(serverless).service(unregister);
     conf.service(scope);
 }
