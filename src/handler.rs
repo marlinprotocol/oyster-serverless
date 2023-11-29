@@ -4,8 +4,8 @@ use crate::{
     workerd,
 };
 
-use actix_web::http::StatusCode;
-use actix_web::{get, post, web, HttpResponse, Responder};
+use actix_web::http::{header, StatusCode};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
@@ -18,6 +18,7 @@ use validator::Validate;
 async fn serverless(
     mut jsonbody: web::Json<RequestBody>,
     appstate: web::Data<AppState>,
+    req: HttpRequest,
 ) -> impl Responder {
     // check if the server is draining
     // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
@@ -33,7 +34,20 @@ async fn serverless(
             .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
-    let tx_hash = &jsonbody.tx_hash.split_off(0);
+    // get the host header value
+    let host_header = req
+        .headers()
+        .get(header::HOST)
+        .context("could not find Host header")
+        .and_then(|x| x.to_str().context("could not parse Host header"));
+    if let Err(err) = host_header {
+        return HttpResponse::BadRequest().body(format!("{:?}", err));
+    }
+    let host_header = host_header.unwrap();
+
+    // get tx hash by splitting, will always have at least one element
+    let tx_hash = host_header.split('.').next().unwrap();
+
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
 
