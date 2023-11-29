@@ -1,8 +1,4 @@
-use crate::{
-    cgroups,
-    model::{AppState, RequestBody},
-    workerd,
-};
+use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
 use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
@@ -12,7 +8,6 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use std::time::Instant;
 use tokio::time::timeout;
-use validator::Validate;
 
 #[post("/")]
 async fn serverless(
@@ -27,12 +22,6 @@ async fn serverless(
     if !appstate.running.load(Ordering::Relaxed) {
         return HttpResponse::Gone().body("worker unregistered");
     }
-
-    // // validate request body
-    // if let Err(err) = jsonbody.validate() {
-    //     return HttpResponse::BadRequest()
-    //         .body(format!("{:?}", anyhow!(err).context("invalid payload")));
-    // }
 
     // get the host header value
     let host_header = req
