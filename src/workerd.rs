@@ -202,7 +202,7 @@ pub async fn cleanup_config_file(
 
 pub async fn get_workerd_response(
     port: u16,
-    input: Option<HashMap<String, serde_json::Value>>,
+    input: actix_web::web::Bytes,
 ) -> Result<Response, anyhow::Error> {
     let port_str = port.to_string();
     let req_url = "http://127.0.0.1:".to_string() + &port_str + "/";
@@ -210,7 +210,7 @@ pub async fn get_workerd_response(
     let response = client
         .post(req_url)
         .header("Content-Type", "application/json")
-        .json(&input)
+        .body(input)
         .send()
         .await?;
     Ok(response)

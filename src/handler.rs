@@ -16,7 +16,7 @@ use validator::Validate;
 
 #[post("/")]
 async fn serverless(
-    mut jsonbody: web::Json<RequestBody>,
+    body: web::Bytes,
     appstate: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -28,11 +28,11 @@ async fn serverless(
         return HttpResponse::Gone().body("worker unregistered");
     }
 
-    // validate request body
-    if let Err(err) = jsonbody.validate() {
-        return HttpResponse::BadRequest()
-            .body(format!("{:?}", anyhow!(err).context("invalid payload")));
-    }
+    // // validate request body
+    // if let Err(err) = jsonbody.validate() {
+    //     return HttpResponse::BadRequest()
+    //         .body(format!("{:?}", anyhow!(err).context("invalid payload")));
+    // }
 
     // get the host header value
     let host_header = req
@@ -224,10 +224,9 @@ async fn serverless(
     }
 
     // worker is ready, make the request
-    let jsonbody_input = jsonbody.input.take();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, jsonbody_input),
+        workerd::get_workerd_response(port, body),
     )
     .await;
 
