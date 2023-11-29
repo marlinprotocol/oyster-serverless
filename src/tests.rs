@@ -31,7 +31,7 @@ pub mod serverlesstest {
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
@@ -64,7 +64,7 @@ pub mod serverlesstest {
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
@@ -97,7 +97,7 @@ pub mod serverlesstest {
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
@@ -126,7 +126,7 @@ pub mod serverlesstest {
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .set_json(&invalid_payload)
             .to_request();
 
@@ -155,7 +155,7 @@ pub mod serverlesstest {
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.serverless.dev",
@@ -184,7 +184,7 @@ pub mod serverlesstest {
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
@@ -213,7 +213,7 @@ pub mod serverlesstest {
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/serverless")
             .append_header((
                 "Host",
                 "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.serverless.dev",
