@@ -3,8 +3,8 @@ use std::time::{Duration, Instant};
 
 use thiserror::Error;
 
-use actix_web::{HttpMessage, HttpRequest, HttpResponse};
-use reqwest::{Client, Response};
+use actix_web::{HttpRequest, HttpResponse};
+use reqwest::Client;
 use serde_json::{json, Value};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
