@@ -21,17 +21,75 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
         let valid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
+            .append_header((
+                "Host",
+                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+            ))
+            .set_json(&valid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn valid_input_different_url_test() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
+                }))
+                .default_service(web::to(handler::serverless)),
+        )
+        .await;
+        let valid_payload = json!({
+            "num": 10
+        });
+
+        let req = test::TestRequest::post()
+            .uri("/serverless")
+            .append_header((
+                "Host",
+                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+            ))
+            .set_json(&valid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn valid_input_different_method_test() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(AppState {
+                    cgroups: Cgroups::new().unwrap().into(),
+                    running: AtomicBool::new(true),
+                    runtime_path: "./runtime/".to_owned(),
+                }))
+                .default_service(web::to(handler::serverless)),
+        )
+        .await;
+        let valid_payload = json!({
+            "num": 10
+        });
+
+        let req = test::TestRequest::get()
+            .uri("/")
             .append_header((
                 "Host",
                 "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
@@ -53,18 +111,16 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .append_header((
                 "Host",
                 "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
@@ -86,18 +142,16 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 10
-            }
+            "num": 10
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .append_header((
                 "Host",
                 "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
@@ -119,14 +173,14 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .set_json(&invalid_payload)
             .to_request();
 
@@ -144,18 +198,16 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({
-            "input": {
-                "num": 100
-            }
+            "num": 100
         });
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .append_header((
                 "Host",
                 "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.serverless.dev",
@@ -177,14 +229,14 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .append_header((
                 "Host",
                 "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
@@ -206,14 +258,14 @@ pub mod serverlesstest {
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
                 }))
-                .configure(handler::config),
+                .default_service(web::to(handler::serverless)),
         )
         .await;
 
         let invalid_payload = json!({});
 
         let req = test::TestRequest::post()
-            .uri("/api/serverless")
+            .uri("/")
             .append_header((
                 "Host",
                 "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.serverless.dev",

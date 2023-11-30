@@ -1,22 +1,16 @@
-use crate::{
-    cgroups,
-    model::{AppState, RequestBody},
-    workerd,
-};
+use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
-use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use std::time::Instant;
+// use std::time::Instant;
 use tokio::time::timeout;
-use validator::Validate;
 
-#[post("/serverless")]
-async fn serverless(
-    mut jsonbody: web::Json<RequestBody>,
+pub async fn serverless(
+    body: web::Bytes,
     appstate: web::Data<AppState>,
     req: HttpRequest,
 ) -> impl Responder {
@@ -26,12 +20,6 @@ async fn serverless(
     // be very careful adding more operations associated with the draining state
     if !appstate.running.load(Ordering::Relaxed) {
         return HttpResponse::Gone().body("worker unregistered");
-    }
-
-    // validate request body
-    if let Err(err) = jsonbody.validate() {
-        return HttpResponse::BadRequest()
-            .body(format!("{:?}", anyhow!(err).context("invalid payload")));
     }
 
     // get the host header value
@@ -46,7 +34,19 @@ async fn serverless(
     let host_header = host_header.unwrap();
 
     // get tx hash by splitting, will always have at least one element
-    let tx_hash = host_header.split('.').next().unwrap();
+    let tx_hash = &host_header.split('.').next().unwrap().to_owned();
+
+    // handle unregister here
+    if tx_hash == "unregister" {
+        // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
+        // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
+        // be very careful adding more operations associated with the draining state
+        appstate.running.store(false, Ordering::Relaxed);
+
+        return HttpResponse::Ok()
+            .status(StatusCode::OK)
+            .body("successfully set server in draining state");
+    }
 
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
@@ -75,7 +75,7 @@ async fn serverless(
         };
     }
 
-    let execution_timer_start = Instant::now();
+    // let execution_timer_start = Instant::now();
 
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
@@ -212,10 +212,9 @@ async fn serverless(
     }
 
     // worker is ready, make the request
-    let jsonbody_input = jsonbody.input.take();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, jsonbody_input),
+        workerd::get_workerd_response(port, req, body),
     )
     .await;
 
@@ -246,39 +245,14 @@ async fn serverless(
             anyhow!(err).context("failed to get a response")
         ));
     }
-    let mut response = response.unwrap();
+    let response = response.unwrap();
 
-    let execution_timer_end = Instant::now();
-    let execution_time = execution_timer_end
-        .duration_since(execution_timer_start)
-        .as_millis()
-        .to_string();
-    println!("Execution time: {}ms", execution_time);
+    // let execution_timer_end = Instant::now();
+    // let execution_time = execution_timer_end
+    //     .duration_since(execution_timer_start)
+    //     .as_millis()
+    //     .to_string();
+    // println!("Execution time: {}ms", execution_time);
 
-    let status = response.status();
-    return response
-        .headers_mut()
-        .into_iter()
-        .fold(HttpResponse::build(status), |mut resp, header| {
-            resp.append_header((header.0.clone(), header.1.clone()));
-            resp
-        })
-        .body(response.bytes().await.unwrap_or_default());
-}
-
-#[get("/unregister")]
-async fn unregister(appstate: web::Data<AppState>) -> impl Responder {
-    // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
-    // not even with reads/writes to the same atomic (we just serve a few more requests at worst)
-    // be very careful adding more operations associated with the draining state
-    appstate.running.store(false, Ordering::Relaxed);
-
-    return HttpResponse::Ok()
-        .status(StatusCode::OK)
-        .body("successfully set server in draining state");
-}
-
-pub fn config(conf: &mut web::ServiceConfig) {
-    let scope = web::scope("/api").service(serverless).service(unregister);
-    conf.service(scope);
+    return response;
 }

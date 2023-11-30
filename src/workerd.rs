@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use std::process::Child;
 use std::time::{Duration, Instant};
 
 use thiserror::Error;
 
-use reqwest::{Client, Response};
+use actix_web::{HttpRequest, HttpResponse};
+use reqwest::Client;
 use serde_json::{json, Value};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -202,16 +202,33 @@ pub async fn cleanup_config_file(
 
 pub async fn get_workerd_response(
     port: u16,
-    input: Option<HashMap<String, serde_json::Value>>,
-) -> Result<Response, anyhow::Error> {
+    req: HttpRequest,
+    body: actix_web::web::Bytes,
+) -> Result<HttpResponse, anyhow::Error> {
     let port_str = port.to_string();
     let req_url = "http://127.0.0.1:".to_string() + &port_str + "/";
     let client = reqwest::Client::new();
-    let response = client
-        .post(req_url)
-        .header("Content-Type", "application/json")
-        .json(&input)
+    let response = req
+        .headers()
+        .into_iter()
+        .fold(
+            client.request(req.method().clone(), req_url),
+            |req, header| req.header(header.0.clone(), header.1.clone()),
+        )
+        .body(body)
         .send()
         .await?;
-    Ok(response)
+
+    let actix_resp = response
+        .headers()
+        .into_iter()
+        .fold(
+            HttpResponse::build(response.status()),
+            |mut resp, header| {
+                resp.append_header((header.0.clone(), header.1.clone()));
+                resp
+            },
+        )
+        .body(response.bytes().await?);
+    Ok(actix_resp)
 }
