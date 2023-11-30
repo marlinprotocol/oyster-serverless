@@ -34,7 +34,7 @@ pub async fn serverless(
     let host_header = host_header.unwrap();
 
     // get tx hash by splitting, will always have at least one element
-    let tx_hash = host_header.split('.').next().unwrap();
+    let tx_hash = &host_header.split('.').next().unwrap().to_owned();
 
     // handle unregister here
     if tx_hash == "unregister" {
@@ -214,7 +214,7 @@ pub async fn serverless(
     // worker is ready, make the request
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, body, req.method().clone()),
+        workerd::get_workerd_response(port, req, body),
     )
     .await;
 
@@ -245,7 +245,7 @@ pub async fn serverless(
             anyhow!(err).context("failed to get a response")
         ));
     }
-    let mut response = response.unwrap();
+    let response = response.unwrap();
 
     // let execution_timer_end = Instant::now();
     // let execution_time = execution_timer_end
@@ -254,13 +254,5 @@ pub async fn serverless(
     //     .to_string();
     // println!("Execution time: {}ms", execution_time);
 
-    let status = response.status();
-    return response
-        .headers_mut()
-        .into_iter()
-        .fold(HttpResponse::build(status), |mut resp, header| {
-            resp.append_header((header.0.clone(), header.1.clone()));
-            resp
-        })
-        .body(response.bytes().await.unwrap_or_default());
+    return response;
 }
