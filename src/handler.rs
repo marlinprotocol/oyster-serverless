@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::Duration;
-use std::time::Instant;
+// use std::time::Instant;
 use tokio::time::timeout;
 
 pub async fn serverless(
@@ -75,7 +75,7 @@ pub async fn serverless(
         };
     }
 
-    let execution_timer_start = Instant::now();
+    // let execution_timer_start = Instant::now();
 
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
@@ -247,12 +247,12 @@ pub async fn serverless(
     }
     let mut response = response.unwrap();
 
-    let execution_timer_end = Instant::now();
-    let execution_time = execution_timer_end
-        .duration_since(execution_timer_start)
-        .as_millis()
-        .to_string();
-    println!("Execution time: {}ms", execution_time);
+    // let execution_timer_end = Instant::now();
+    // let execution_time = execution_timer_end
+    //     .duration_since(execution_timer_start)
+    //     .as_millis()
+    //     .to_string();
+    // println!("Execution time: {}ms", execution_time);
 
     let status = response.status();
     return response
