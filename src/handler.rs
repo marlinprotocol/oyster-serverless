@@ -1,7 +1,7 @@
 use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
-use actix_web::{post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
@@ -214,7 +214,7 @@ pub async fn serverless(
     // worker is ready, make the request
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, body),
+        workerd::get_workerd_response(port, body, req.method().clone()),
     )
     .await;
 
