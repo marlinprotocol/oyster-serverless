@@ -148,9 +148,6 @@ pub mod serverlesstest {
                 .default_service(web::to(handler::serverless)),
         )
         .await;
-        let valid_payload = json!({
-            "num": 10
-        });
 
         let req = test::TestRequest::get()
             .uri("/")
@@ -158,12 +155,47 @@ pub mod serverlesstest {
                 "Host",
                 "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
             ))
-            .set_json(&valid_payload)
+            .set_json(&json!({
+                "num": 10
+            }))
             .to_request();
 
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,5");
+
+        let req = test::TestRequest::get()
+            .uri("/")
+            .append_header((
+                "Host",
+                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+            ))
+            .set_json(&json!({
+                "num": 20
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,5");
+
+        let req = test::TestRequest::get()
+            .uri("/")
+            .append_header((
+                "Host",
+                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+            ))
+            .set_json(&json!({
+                "num": 600
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,2,3,5,5");
     }
 
     #[actix_web::test]
