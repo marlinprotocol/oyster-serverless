@@ -216,6 +216,10 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "failed to create code file\n\nCaused by:\n    to address 0x8b842ad88aaffd63d52ec54f6428fb7ff83060a8 does not match expected 0x30694a76d737211a908d0dd672f47e1d29fbfb02"
+        );
     }
 
     #[actix_web::test]
@@ -238,6 +242,10 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "failed to create code file\n\nCaused by:\n    tx not found"
+        );
     }
 
     #[actix_web::test]
@@ -254,6 +262,10 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "could not find Host header"
+        );
     }
 
     #[actix_web::test]
@@ -276,6 +288,10 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "syntax error in the code: service main: Uncaught SyntaxError: Unexpected identifier 'data'\n  at main:1:118"
+        );
     }
 
     #[actix_web::test]
@@ -296,6 +312,10 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "Please provide a valid integer as input in the format : {'num':10}"
+        );
     }
 
     #[actix_web::test]
@@ -316,5 +336,9 @@ pub mod serverlesstest {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), http::StatusCode::REQUEST_TIMEOUT);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "worker timed out\n\nCaused by:\n    deadline has elapsed"
+        );
     }
 }
