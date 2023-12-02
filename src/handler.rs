@@ -52,7 +52,9 @@ pub async fn serverless(
     let workerd_runtime_path = &appstate.runtime_path;
 
     // create code file
-    if let Err(err) = workerd::create_code_file(tx_hash, slug, workerd_runtime_path).await {
+    if let Err(err) =
+        workerd::create_code_file(tx_hash, slug, workerd_runtime_path, &appstate.rpc).await
+    {
         use workerd::ServerlessError::*;
         return match err {
             CalldataRetrieve(_)

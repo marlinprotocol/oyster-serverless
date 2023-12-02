@@ -43,9 +43,8 @@ pub enum ServerlessError {
     BadPort(#[source] std::num::ParseIntError),
 }
 
-async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
+async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
     let client = Client::new();
-    let url = "https://goerli-rollup.arbitrum.io/rpc";
     let method = "eth_getTransactionByHash";
     let params = json!([&tx_hash]);
     let id = 1;
@@ -57,7 +56,7 @@ async fn get_transaction_data(tx_hash: &str) -> Result<Value, reqwest::Error> {
         "id": id,
     });
 
-    let response = client.post(url).json(&request).send().await?;
+    let response = client.post(rpc).json(&request).send().await?;
     let json_response = response.json::<Value>().await?;
 
     Ok(json_response)
@@ -67,9 +66,10 @@ pub async fn create_code_file(
     tx_hash: &str,
     slug: &str,
     workerd_runtime_path: &str,
+    rpc: &str,
 ) -> Result<(), ServerlessError> {
     // get tx data
-    let mut tx_data = match get_transaction_data(tx_hash).await?["result"].take() {
+    let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
         Value::Null => Err(ServerlessError::TxNotFound),
         other => Ok(other),
     }?;
