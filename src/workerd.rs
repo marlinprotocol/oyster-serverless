@@ -22,7 +22,7 @@ pub enum ServerlessError {
     #[error("to field of transaction is not an address")]
     InvalidTxToType,
     #[error("to address {0} does not match expected {1}")]
-    InvalidTxToValue(String, &'static str),
+    InvalidTxToValue(String, String),
     #[error("calldata field of transaction is not a string")]
     InvalidTxCalldataType,
     #[error("calldata is not a valid hex string")]
@@ -67,6 +67,7 @@ pub async fn create_code_file(
     slug: &str,
     workerd_runtime_path: &str,
     rpc: &str,
+    contract: &str,
 ) -> Result<(), ServerlessError> {
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
@@ -81,10 +82,10 @@ pub async fn create_code_file(
     }?;
 
     // check contract address matches expected
-    if contract_address != "0x30694a76d737211a908d0dd672f47e1d29fbfb02" {
+    if contract_address != contract {
         return Err(ServerlessError::InvalidTxToValue(
             contract_address,
-            "0x30694a76d737211a908d0dd672f47e1d29fbfb02",
+            contract.to_owned(),
         ));
     }
 
