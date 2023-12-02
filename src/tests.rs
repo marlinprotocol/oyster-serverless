@@ -32,6 +32,7 @@ pub mod serverlesstest {
                 running: AtomicBool::new(true),
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
+                contract: "0x30694a76d737211a908d0dd672f47e1d29fbfb02".to_owned(),
             }))
             .default_service(web::to(handler::serverless))
     }
