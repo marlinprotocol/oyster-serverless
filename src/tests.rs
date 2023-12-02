@@ -208,7 +208,7 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
+                "0xee70795a60267a1d2641ade5f06a9406d66ad8b20e0f5a261c6bd1a3c229b01c.serverless.dev",
             ))
             .set_json(&invalid_payload)
             .to_request();
