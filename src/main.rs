@@ -17,6 +17,13 @@ struct Args {
 
     #[clap(long, value_parser, default_value = "www.marlin.org")]
     gateway: String,
+
+    #[clap(
+        long,
+        value_parser,
+        default_value = "https://goerli-rollup.arbitrum.io/rpc"
+    )]
+    rpc: String,
 }
 
 #[tokio::main]
@@ -44,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
         cgroups: cgroups.into(),
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
+        rpc: cli.rpc,
     });
 
     let server = HttpServer::new(move || {

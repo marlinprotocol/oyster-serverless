@@ -8,4 +8,5 @@ pub struct AppState {
     // be very careful adding more operations associated with the draining state
     pub running: AtomicBool,
     pub runtime_path: String,
+    pub rpc: String,
 }
