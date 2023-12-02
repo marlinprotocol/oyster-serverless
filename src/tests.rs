@@ -20,6 +20,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -82,6 +83,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -144,6 +146,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -206,6 +209,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -237,6 +241,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -268,6 +273,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -293,6 +299,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -324,6 +331,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
@@ -353,6 +361,7 @@ pub mod serverlesstest {
                     cgroups: Cgroups::new().unwrap().into(),
                     running: AtomicBool::new(true),
                     runtime_path: "./runtime/".to_owned(),
+                    rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 }))
                 .default_service(web::to(handler::serverless)),
         )
