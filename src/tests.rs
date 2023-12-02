@@ -8,22 +8,38 @@ pub mod serverlesstest {
     use crate::cgroups::Cgroups;
     use crate::handler;
     use crate::model::AppState;
-    use actix_web::{body::MessageBody, http, test, web, App};
+    use actix_web::{
+        body::MessageBody,
+        dev::{ServiceFactory, ServiceRequest, ServiceResponse},
+        error::Error,
+        http, test, web, App,
+    };
     use serde_json::json;
     use std::sync::atomic::AtomicBool;
 
+    fn new_app() -> App<
+        impl ServiceFactory<
+            ServiceRequest,
+            Response = ServiceResponse<impl MessageBody + std::fmt::Debug>,
+            Config = (),
+            InitError = (),
+            Error = Error,
+        >,
+    > {
+        App::new()
+            .app_data(web::Data::new(AppState {
+                cgroups: Cgroups::new().unwrap().into(),
+                running: AtomicBool::new(true),
+                runtime_path: "./runtime/".to_owned(),
+                rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
+                contract: "0x30694a76d737211a908d0dd672f47e1d29fbfb02".to_owned(),
+            }))
+            .default_service(web::to(handler::serverless))
+    }
+
     #[actix_web::test]
     async fn valid_input_test() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let req = test::TestRequest::post()
             .uri("/")
@@ -76,16 +92,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn valid_input_different_uri_test() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let req = test::TestRequest::post()
             .uri("/serverless")
@@ -138,16 +145,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn valid_input_different_method_test() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let req = test::TestRequest::get()
             .uri("/")
@@ -200,16 +198,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn interacting_with_wrong_smartcontract() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({
             "num": 10
@@ -231,16 +220,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_txhash() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({
             "num": 10
@@ -262,16 +242,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn txhash_not_provided() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({});
 
@@ -287,16 +258,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_js_code_in_calldata() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({
             "num": 100
@@ -318,16 +280,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn invalid_payload_test() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({});
 
@@ -347,16 +300,7 @@ pub mod serverlesstest {
 
     #[actix_web::test]
     async fn response_timeout_test() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(AppState {
-                    cgroups: Cgroups::new().unwrap().into(),
-                    running: AtomicBool::new(true),
-                    runtime_path: "./runtime/".to_owned(),
-                }))
-                .default_service(web::to(handler::serverless)),
-        )
-        .await;
+        let app = test::init_service(new_app()).await;
 
         let invalid_payload = json!({});
 
