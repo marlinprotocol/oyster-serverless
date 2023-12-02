@@ -9,4 +9,5 @@ pub struct AppState {
     pub running: AtomicBool,
     pub runtime_path: String,
     pub rpc: String,
+    pub contract: String,
 }

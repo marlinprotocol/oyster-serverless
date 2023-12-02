@@ -24,6 +24,13 @@ struct Args {
         default_value = "https://goerli-rollup.arbitrum.io/rpc"
     )]
     rpc: String,
+
+    #[clap(
+        long,
+        value_parser,
+        default_value = "0x30694a76d737211a908d0dd672f47e1d29fbfb02"
+    )]
+    contract: String,
 }
 
 #[tokio::main]
@@ -52,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
+        contract: cli.contract,
     });
 
     let server = HttpServer::new(move || {
