@@ -10,7 +10,7 @@ pub enum CgroupsError {
     Fetch(#[source] std::io::Error),
     #[error("no free cgroups left")]
     NoFree,
-    #[error("failed to retrieve cgroups")]
+    #[error("failed to execute cgroups")]
     Execute(#[source] std::io::Error),
 }
 
