@@ -45,7 +45,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -61,7 +62,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -77,7 +79,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -98,7 +101,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -114,7 +118,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -130,7 +135,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -151,7 +157,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -167,7 +174,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -183,7 +191,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -208,7 +217,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xee70795a60267a1d2641ade5f06a9406d66ad8b20e0f5a261c6bd1a3c229b01c.serverless.dev",
+                // "0xee70795a60267a1d2641ade5f06a9406d66ad8b20e0f5a261c6bd1a3c229b01c.oyster.run",
+                "5ZYHSWTAEZ5B2JSBVXS7A2UUA3LGVWFSBYHVUJQ4NPI2HQRJWAOA.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -234,7 +244,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
+                // "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.oyster.run",
+                "G6YLFWO5LDMRGB4B7SIU3JCWYFXMIAYBB2GUYJ5Q5JDFPISMQVDA.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -280,7 +291,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.serverless.dev",
+                // "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.oyster.run",
+                "HUW6WU6QO74IWQGN6OUBZY6KYY3H7XOOELY7CMPDELTUMPHDJ6HQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -304,7 +316,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -328,7 +341,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.serverless.dev",
+                // "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.oyster.run",
+                "6F73TEOGJDUL3SJ7FXH4ZQS4TB3UBBHOJLRZR4FSRHTJROMZEMBQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
