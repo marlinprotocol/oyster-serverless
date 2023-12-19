@@ -355,4 +355,29 @@ pub mod serverlesstest {
             "worker timed out\n\nCaused by:\n    deadline has elapsed"
         );
     }
+
+    #[actix_web::test]
+    async fn invalid_tx_hash_encoding_test() {
+        let app = test::init_service(new_app()).await;
+
+        let invalid_payload = json!({});
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.oyster.run",
+                "6F73TEOGJDUL3SJ7FXH4ZQS4TB3UBBHOJLRZR4FSRHTJROMZEMB0.oyster.run",
+            ))
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "invalid tx hash encoding: DecodeError { position: 51, kind: Symbol }"
+        );
+    }
 }
