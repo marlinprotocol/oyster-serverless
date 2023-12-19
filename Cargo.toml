@@ -28,3 +28,4 @@ clap = { version = "4.4.7", features = ["derive"] }
 thiserror = "1.0.50"
 hex = "0.4.3"
 rand = "0.8.5"
+data-encoding = "2.5.0"
