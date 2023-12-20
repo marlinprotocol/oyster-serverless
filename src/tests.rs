@@ -94,6 +94,62 @@ pub mod serverlesstest {
     }
 
     #[actix_web::test]
+    async fn valid_input_lowercase_test() {
+        let app = test::init_service(new_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 10
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,5");
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 20
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,5");
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 600
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,2,3,5,5");
+    }
+
+    #[actix_web::test]
     async fn valid_input_different_uri_test() {
         let app = test::init_service(new_app()).await;
 
