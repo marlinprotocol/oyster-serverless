@@ -6,6 +6,7 @@ use thiserror::Error;
 use actix_web::{HttpRequest, HttpResponse};
 use reqwest::Client;
 use serde_json::{json, Value};
+use tiny_keccak::{Hasher, Keccak};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
@@ -206,6 +207,27 @@ pub async fn get_workerd_response(
     req: HttpRequest,
     body: actix_web::web::Bytes,
 ) -> Result<HttpResponse, anyhow::Error> {
+    let mut hasher = Keccak::v256();
+    hasher.update(b"|oyster-serverless-hasher|");
+    hasher.update(b"|request|");
+    hasher.update(b"|method|");
+    hasher.update(req.method().to_string().as_bytes());
+    hasher.update(b"|pathandquery|");
+    hasher.update(
+        req.uri()
+            .path_and_query()
+            .map(|x| x.as_str())
+            .unwrap_or("")
+            .as_bytes(),
+    );
+    hasher.update(b"|headers|");
+    req.headers().iter().for_each(|h| {
+        hasher.update(h.0.as_str().as_bytes());
+        hasher.update(h.1.as_bytes());
+    });
+    hasher.update(b"|body|");
+    hasher.update(&body);
+
     let port_str = port.to_string();
     let req_url = "http://127.0.0.1:".to_string() + &port_str + "/";
     let client = reqwest::Client::new();
@@ -219,17 +241,29 @@ pub async fn get_workerd_response(
         .body(body)
         .send()
         .await?;
+    hasher.update(b"|response|");
+    hasher.update(b"|headers|");
+    response.headers().iter().for_each(|h| {
+        hasher.update(h.0.as_str().as_bytes());
+        hasher.update(h.1.as_bytes());
+    });
 
-    let actix_resp = response
-        .headers()
-        .into_iter()
-        .fold(
-            HttpResponse::build(response.status()),
-            |mut resp, header| {
-                resp.append_header((header.0.clone(), header.1.clone()));
-                resp
-            },
-        )
-        .body(response.bytes().await?);
-    Ok(actix_resp)
+    let mut actix_resp = response.headers().into_iter().fold(
+        HttpResponse::build(response.status()),
+        |mut resp, header| {
+            resp.append_header((header.0.clone(), header.1.clone()));
+            resp
+        },
+    );
+    let response_body = response.bytes().await?;
+
+    hasher.update(b"|body|");
+    hasher.update(&response_body);
+
+    let mut hash = [0u8; 32];
+    hasher.finalize(&mut hash);
+
+    // TODO: sign and attach
+
+    Ok(actix_resp.body(response_body))
 }
