@@ -52,7 +52,7 @@ pub async fn serverless(
     let workerd_runtime_path = &appstate.runtime_path;
 
     // decode base32 into hex
-    let tx_hash = data_encoding::BASE32_NOPAD.decode(tx_hash.as_bytes());
+    let tx_hash = data_encoding::BASE32_NOPAD.decode(tx_hash.to_uppercase().as_bytes());
     if let Err(err) = tx_hash {
         return HttpResponse::BadRequest().body(format!("invalid tx hash encoding: {:?}", err));
     }
