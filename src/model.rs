@@ -10,4 +10,5 @@ pub struct AppState {
     pub runtime_path: String,
     pub rpc: String,
     pub contract: String,
+    pub signer: [u8; 32],
 }
