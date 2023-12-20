@@ -1,6 +1,7 @@
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use tokio::fs;
 
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
@@ -31,6 +32,9 @@ struct Args {
         default_value = "0x30694a76d737211a908d0dd672f47e1d29fbfb02"
     )]
     contract: String,
+
+    #[clap(long, value_parser)]
+    signer: String,
 }
 
 #[tokio::main]
@@ -54,12 +58,19 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow!("no cgroups found, make sure you have generated cgroups on your system using instructions in the readme"));
     }
 
+    let signer: [u8; 32] = fs::read(cli.signer)
+        .await
+        .context("failed to read signer key")?
+        .as_slice()
+        .try_into()?;
+
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
         contract: cli.contract,
+        signer,
     });
 
     let server = HttpServer::new(move || {
