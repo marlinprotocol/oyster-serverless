@@ -33,7 +33,7 @@ pub mod serverlesstest {
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x30694a76d737211a908d0dd672f47e1d29fbfb02".to_owned(),
-                signer: [0u8; 32],
+                signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
             }))
             .default_service(web::to(handler::serverless))
     }
