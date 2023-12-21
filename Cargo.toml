@@ -30,3 +30,4 @@ hex = "0.4.3"
 rand = "0.8.5"
 data-encoding = "2.5.0"
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+k256 = "0.13.2"
