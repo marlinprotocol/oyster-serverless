@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use thiserror::Error;
 
 use actix_web::{HttpRequest, HttpResponse};
+use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tiny_keccak::{Hasher, Keccak};
@@ -206,6 +207,7 @@ pub async fn get_workerd_response(
     port: u16,
     req: HttpRequest,
     body: actix_web::web::Bytes,
+    signer: &k256::ecdsa::SigningKey,
 ) -> Result<HttpResponse, anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");
@@ -263,7 +265,11 @@ pub async fn get_workerd_response(
     let mut hash = [0u8; 32];
     hasher.finalize(&mut hash);
 
-    // TODO: sign and attach
+    let (rs, v) = signer.sign_prehash_recoverable(&hash)?;
+
+    let signature = rs.to_bytes().append(27 + v.to_byte());
+
+    actix_resp.insert_header(("X-Oyster-Signature", hex::encode(signature.as_slice())));
 
     Ok(actix_resp.body(response_body))
 }

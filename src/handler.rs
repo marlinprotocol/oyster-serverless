@@ -230,7 +230,7 @@ pub async fn serverless(
     // worker is ready, make the request
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, req, body),
+        workerd::get_workerd_response(port, req, body, &appstate.signer),
     )
     .await;
 
