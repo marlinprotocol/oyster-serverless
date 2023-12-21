@@ -212,6 +212,13 @@ pub async fn get_workerd_response(
 ) -> Result<HttpResponse, anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs();
+    hasher.update(b"|timestamp|");
+    hasher.update(&timestamp.to_be_bytes());
+
     hasher.update(b"|request|");
     hasher.update(b"|method|");
     hasher.update(req.method().to_string().as_bytes());
