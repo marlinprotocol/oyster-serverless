@@ -269,6 +269,7 @@ pub async fn get_workerd_response(
 
     let signature = rs.to_bytes().append(27 + v.to_byte());
 
+    actix_resp.insert_header(("X-Oyster-Timestamp", timestamp.to_string()));
     actix_resp.insert_header(("X-Oyster-Signature", hex::encode(signature.as_slice())));
 
     Ok(actix_resp.body(response_body))
