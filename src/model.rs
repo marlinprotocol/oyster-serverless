@@ -10,5 +10,5 @@ pub struct AppState {
     pub runtime_path: String,
     pub rpc: String,
     pub contract: String,
-    pub signer: k256::SecretKey,
+    pub signer: k256::ecdsa::SigningKey,
 }

@@ -58,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow!("no cgroups found, make sure you have generated cgroups on your system using instructions in the readme"));
     }
 
-    let signer = k256::SecretKey::from_slice(
+    let signer = k256::ecdsa::SigningKey::from_slice(
         fs::read(cli.signer)
             .await
             .context("failed to read signer key")?
