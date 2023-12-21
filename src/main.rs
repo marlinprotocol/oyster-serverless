@@ -58,11 +58,13 @@ async fn main() -> anyhow::Result<()> {
         return Err(anyhow!("no cgroups found, make sure you have generated cgroups on your system using instructions in the readme"));
     }
 
-    let signer: [u8; 32] = fs::read(cli.signer)
-        .await
-        .context("failed to read signer key")?
-        .as_slice()
-        .try_into()?;
+    let signer = k256::SecretKey::from_slice(
+        fs::read(cli.signer)
+            .await
+            .context("failed to read signer key")?
+            .as_slice(),
+    )
+    .context("invalid signer key")?;
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
