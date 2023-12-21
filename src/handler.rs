@@ -228,9 +228,10 @@ pub async fn serverless(
     }
 
     // worker is ready, make the request
+    let host_header = host_header.to_owned();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, req, body, &appstate.signer),
+        workerd::get_workerd_response(port, req, body, &appstate.signer, &host_header),
     )
     .await;
 

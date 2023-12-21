@@ -208,6 +208,7 @@ pub async fn get_workerd_response(
     req: HttpRequest,
     body: actix_web::web::Bytes,
     signer: &k256::ecdsa::SigningKey,
+    host_header: &str,
 ) -> Result<HttpResponse, anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");
@@ -222,11 +223,8 @@ pub async fn get_workerd_response(
             .unwrap_or("")
             .as_bytes(),
     );
-    hasher.update(b"|headers|");
-    req.headers().iter().for_each(|h| {
-        hasher.update(h.0.as_str().as_bytes());
-        hasher.update(h.1.as_bytes());
-    });
+    hasher.update(b"|host|");
+    hasher.update(host_header.as_bytes());
     hasher.update(b"|body|");
     hasher.update(&body);
 
@@ -244,11 +242,6 @@ pub async fn get_workerd_response(
         .send()
         .await?;
     hasher.update(b"|response|");
-    hasher.update(b"|headers|");
-    response.headers().iter().for_each(|h| {
-        hasher.update(h.0.as_str().as_bytes());
-        hasher.update(h.1.as_bytes());
-    });
 
     let mut actix_resp = response.headers().into_iter().fold(
         HttpResponse::build(response.status()),
