@@ -29,7 +29,7 @@ cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64
 This transaction hash contains the JavaScript code that finds the prime factors of a given number :
 <a href="https://goerli.arbiscan.io/tx/0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113">0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113</a>
 
-Endpoint (POST) : `http://0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.localhost:6000/api/serverless`
+Endpoint (POST) : `http://Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.localhost:6000`
 
 JSON body :
 
