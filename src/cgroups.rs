@@ -10,7 +10,7 @@ pub enum CgroupsError {
     Fetch(#[source] std::io::Error),
     #[error("no free cgroups left")]
     NoFree,
-    #[error("failed to retrieve cgroups")]
+    #[error("failed to execute cgroups")]
     Execute(#[source] std::io::Error),
 }
 
@@ -41,10 +41,9 @@ impl Cgroups {
         cgroup: &str,
         args: impl IntoIterator<Item = impl AsRef<OsStr>>,
     ) -> Result<Child, CgroupsError> {
-        let child = Command::new("sudo")
-            .arg("/usr/bin/cgexec")
+        let child = Command::new("cgexec")
             .arg("-g")
-            .arg("memory:".to_string() + cgroup)
+            .arg("memory,cpu:".to_string() + cgroup)
             .args(args)
             .stderr(Stdio::piped())
             .spawn()
@@ -55,7 +54,7 @@ impl Cgroups {
 }
 
 fn get_cgroups() -> Result<Vec<String>, std::io::Error> {
-    Ok(fs::read_dir("/sys/fs/cgroup")?
+    Ok(fs::read_dir("/sys/fs/cgroup/memory")?
         .filter_map(|dir| {
             dir.ok().and_then(|dir| {
                 dir.path().file_name().and_then(|name| {

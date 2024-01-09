@@ -33,6 +33,7 @@ pub mod serverlesstest {
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://goerli-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x30694a76d737211a908d0dd672f47e1d29fbfb02".to_owned(),
+                signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
             }))
             .default_service(web::to(handler::serverless))
     }
@@ -45,7 +46,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -61,7 +63,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -77,7 +80,64 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 600
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,2,3,5,5");
+    }
+
+    #[actix_web::test]
+    async fn valid_input_lowercase_test() {
+        let app = test::init_service(new_app()).await;
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 10
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,5");
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
+            ))
+            .set_json(&json!({
+                "num": 20
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        assert_eq!(resp.into_body().try_into_bytes().unwrap(), "2,2,5");
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "y7mrel2yhfy5jaaxi6vsjtz6qomee5fy2vstjhwvhjz6bjkh2ejq.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -98,7 +158,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -114,7 +175,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -130,7 +192,8 @@ pub mod serverlesstest {
             .uri("/serverless")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -151,7 +214,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -167,7 +231,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -183,7 +248,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -208,7 +274,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xee70795a60267a1d2641ade5f06a9406d66ad8b20e0f5a261c6bd1a3c229b01c.serverless.dev",
+                // "0xee70795a60267a1d2641ade5f06a9406d66ad8b20e0f5a261c6bd1a3c229b01c.oyster.run",
+                "5ZYHSWTAEZ5B2JSBVXS7A2UUA3LGVWFSBYHVUJQ4NPI2HQRJWAOA.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -234,7 +301,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.serverless.dev",
+                // "0x37b0b2d9dd58d9130781fc914da456c16ec403010e8d4c27b0ea4657a24c8546.oyster.run",
+                "G6YLFWO5LDMRGB4B7SIU3JCWYFXMIAYBB2GUYJ5Q5JDFPISMQVDA.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -280,7 +348,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.serverless.dev",
+                // "0x3d2deb53d077f88b40cdf3a81ce3cac6367fddce22f1f131e322e7463ce34f8f.oyster.run",
+                "HUW6WU6QO74IWQGN6OUBZY6KYY3H7XOOELY7CMPDELTUMPHDJ6HQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -304,7 +373,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.serverless.dev",
+                // "0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113.oyster.run",
+                "Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -328,7 +398,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.serverless.dev",
+                // "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.oyster.run",
+                "6F73TEOGJDUL3SJ7FXH4ZQS4TB3UBBHOJLRZR4FSRHTJROMZEMBQ.oyster.run",
             ))
             .set_json(&invalid_payload)
             .to_request();
@@ -339,6 +410,31 @@ pub mod serverlesstest {
         assert_eq!(
             resp.into_body().try_into_bytes().unwrap(),
             "worker timed out\n\nCaused by:\n    deadline has elapsed"
+        );
+    }
+
+    #[actix_web::test]
+    async fn invalid_tx_hash_encoding_test() {
+        let app = test::init_service(new_app()).await;
+
+        let invalid_payload = json!({});
+
+        let req = test::TestRequest::post()
+            .uri("/")
+            .append_header((
+                "Host",
+                // "0xf17fb991c648e8bdc93f2dcfccc25c98774084ee4ae398f0b289e698b9992303.oyster.run",
+                "6F73TEOGJDUL3SJ7FXH4ZQS4TB3UBBHOJLRZR4FSRHTJROMZEMB0.oyster.run",
+            ))
+            .set_json(&invalid_payload)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+        assert_eq!(
+            resp.into_body().try_into_bytes().unwrap(),
+            "invalid tx hash encoding: DecodeError { position: 51, kind: Symbol }"
         );
     }
 }

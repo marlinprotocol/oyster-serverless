@@ -34,7 +34,7 @@ pub async fn serverless(
     let host_header = host_header.unwrap();
 
     // get tx hash by splitting, will always have at least one element
-    let tx_hash = &host_header.split('.').next().unwrap().to_owned();
+    let tx_hash = host_header.split('.').next().unwrap().to_owned();
 
     // handle unregister here
     if tx_hash == "unregister" {
@@ -50,6 +50,14 @@ pub async fn serverless(
 
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
+
+    // decode base32 into hex
+    let tx_hash = data_encoding::BASE32_NOPAD.decode(tx_hash.to_uppercase().as_bytes());
+    if let Err(err) = tx_hash {
+        return HttpResponse::BadRequest().body(format!("invalid tx hash encoding: {:?}", err));
+    }
+    let tx_hash = tx_hash.unwrap();
+    let tx_hash = &("0x".to_owned() + &data_encoding::HEXLOWER.encode(&tx_hash));
 
     // create code file
     if let Err(err) = workerd::create_code_file(
@@ -220,9 +228,10 @@ pub async fn serverless(
     }
 
     // worker is ready, make the request
+    let host_header = host_header.to_owned();
     let response = timeout(
         Duration::from_secs(5),
-        workerd::get_workerd_response(port, req, body),
+        workerd::get_workerd_response(port, req, body, &appstate.signer, &host_header),
     )
     .await;
 
