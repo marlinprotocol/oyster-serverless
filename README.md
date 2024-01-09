@@ -44,5 +44,5 @@ JSON body :
 The tests need root privileges internally. They should work as long as the shell has sudo cached, a simple `sudo echo` will ensure that.
 
 ```
-sudo echo && cargo test
+sudo echo && cargo test -- --test-threads 1
 ```
