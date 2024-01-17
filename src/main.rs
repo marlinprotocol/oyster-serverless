@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use tiny_keccak::Keccak;
 use tokio::fs;
 
 use serverless::cgroups::Cgroups;
@@ -32,6 +34,9 @@ struct Args {
         default_value = "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1"
     )]
     contract: String,
+
+    #[clap(long, value_parser)]
+    operator: String,
 
     #[clap(long, value_parser)]
     signer: String,
@@ -72,7 +77,9 @@ async fn main() -> anyhow::Result<()> {
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
         contract: cli.contract,
-        signer,
+        signer: signer,
+        service_costs: HashMap::new().into(),
+        hasher: Keccak::v256().into(),
     });
 
     let server = HttpServer::new(move || {

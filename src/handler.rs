@@ -3,10 +3,10 @@ use crate::{cgroups, model::AppState, workerd};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
+use tiny_keccak::Hasher;
 use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
-use std::time::Duration;
-// use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::time::timeout;
 
 pub async fn serverless(
@@ -72,6 +72,7 @@ pub async fn serverless(
         use workerd::ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
+            | TxDepositNotEnough
             | TxNotFound
             | InvalidTxToType
             | InvalidTxToValue(_, _)
@@ -91,7 +92,7 @@ pub async fn serverless(
         };
     }
 
-    // let execution_timer_start = Instant::now();
+    let execution_timer_start = Instant::now();
 
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
@@ -262,14 +263,22 @@ pub async fn serverless(
             anyhow!(err).context("failed to get a response")
         ));
     }
-    let response = response.unwrap();
+    let (response, hash) = response.unwrap();
 
-    // let execution_timer_end = Instant::now();
-    // let execution_time = execution_timer_end
-    //     .duration_since(execution_timer_start)
-    //     .as_millis()
-    //     .to_string();
-    // println!("Execution time: {}ms", execution_time);
+    let execution_timer_end = Instant::now();
+    let execution_time = execution_timer_end
+        .duration_since(execution_timer_start)
+        .as_millis();
+
+    let execution_cost = 1 + 2*execution_time;               // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
+    let mut map_guard = appstate.service_costs.lock().unwrap();
+    let fee = map_guard.entry(tx_hash.to_string()).or_insert(0);
+    *fee += execution_cost as u64;
+    drop(map_guard);
+
+    let mut hasher_guard = appstate.hasher.lock().unwrap();
+    hasher_guard.update(&hash);
+    drop(hasher_guard);
 
     return response;
 }

@@ -1,3 +1,4 @@
+use std::io::Read;
 use std::process::Child;
 use std::time::{Duration, Instant};
 
@@ -8,10 +9,13 @@ use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tiny_keccak::{Hasher, Keccak};
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
+use ethers::prelude::*;
+use ethers::core::abi::Abi;
+use tokio::io::AsyncWriteExt;
+use std::{convert::TryFrom, sync::Arc};
+use std::fs::File;
 
 use crate::cgroups::{Cgroups, CgroupsError};
 
@@ -19,6 +23,10 @@ use crate::cgroups::{Cgroups, CgroupsError};
 pub enum ServerlessError {
     #[error("failed to retrieve calldata")]
     CalldataRetrieve(#[from] reqwest::Error),
+    #[error("failed to retrieve tx deposit")]
+    TxDepositNotFound,
+    #[error("tx deposit not enough")]
+    TxDepositNotEnough,
     #[error("tx not found")]
     TxNotFound,
     #[error("to field of transaction is not an address")]
@@ -43,6 +51,22 @@ pub enum ServerlessError {
     ConfigFileDelete(#[source] tokio::io::Error),
     #[error("failed to retrieve port from cgroup")]
     BadPort(#[source] std::num::ParseIntError),
+}
+
+async fn get_current_deposit(
+    tx_hash: &str, 
+    rpc: &str, 
+    contract: &str,
+) -> Result<U256, anyhow::Error> {
+    let abi_file_path = "src/contract_abi.json";            // TODO: NEED THE ABI FILE
+    let mut abi_json = String::new();
+    let mut file = File::open(abi_file_path)?;
+    file.read_to_string(&mut abi_json)?;
+    let abi = serde_json::from_str::<Abi>(&abi_json)?;
+    let provider = Provider::<Http>::try_from(rpc)?;
+    let contract = Contract::new(contract.parse::<Address>()?, abi, Arc::new(provider));
+    let current_deposit: U256 = contract.method::<_, U256>("getDeposit", tx_hash.parse::<Address>()?)?.call().await?;      // TODO: NEED THE FUNCTION DEFINITION 
+    Ok(current_deposit)
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -71,6 +95,15 @@ pub async fn create_code_file(
     rpc: &str,
     contract: &str,
 ) -> Result<(), ServerlessError> {
+    let tx_deposit = match get_current_deposit(tx_hash, rpc, contract).await {
+        Ok(deposit_val) => Ok(deposit_val),
+        _ => Err(ServerlessError::TxDepositNotFound),
+    }?;
+
+    if tx_deposit <= U256::from(200) {                                // TODO: FIX THE FIXED MINIMUM VALUE
+       return Err(ServerlessError::TxDepositNotEnough);
+    }
+
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
         Value::Null => Err(ServerlessError::TxNotFound),
@@ -106,7 +139,7 @@ pub async fn create_code_file(
 
     // write calldata to file
     let mut file =
-        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+        tokio::fs::File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
             .await
             .map_err(ServerlessError::CodeFileCreate)?;
     file.write_all(calldata.as_slice())
@@ -139,7 +172,7 @@ const oysterWorker :Workerd.Worker = (
     );
 
     let mut file =
-        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+        tokio::fs::File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
             .await
             .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
@@ -211,7 +244,8 @@ pub async fn get_workerd_response(
     body: actix_web::web::Bytes,
     signer: &k256::ecdsa::SigningKey,
     host_header: &str,
-) -> Result<HttpResponse, anyhow::Error> {
+
+) -> Result<(HttpResponse, [u8; 32]), anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");
 
@@ -274,5 +308,5 @@ pub async fn get_workerd_response(
     actix_resp.insert_header(("X-Oyster-Timestamp", timestamp.to_string()));
     actix_resp.insert_header(("X-Oyster-Signature", hex::encode(signature.as_slice())));
 
-    Ok(actix_resp.body(response_body))
+    Ok((actix_resp.body(response_body), hash))
 }

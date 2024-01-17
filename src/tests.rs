@@ -15,7 +15,8 @@ pub mod serverlesstest {
         http, test, web, App,
     };
     use serde_json::json;
-    use std::sync::atomic::AtomicBool;
+    use tiny_keccak::Keccak;
+    use std::{sync::atomic::AtomicBool, collections::HashMap};
 
     fn new_app() -> App<
         impl ServiceFactory<
@@ -34,6 +35,8 @@ pub mod serverlesstest {
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
+                service_costs: HashMap::new().into(),
+                hasher: Keccak::v256().into(),
             }))
             .default_service(web::to(handler::serverless))
     }
