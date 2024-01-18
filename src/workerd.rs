@@ -58,14 +58,14 @@ async fn get_current_deposit(
     rpc: &str, 
     contract: &str,
 ) -> Result<U256, anyhow::Error> {
-    let abi_file_path = "src/contract_abi.json";            // TODO: NEED THE ABI FILE
+    let abi_file_path = "src/contract_abi.json";           
     let mut abi_json = String::new();
     let mut file = File::open(abi_file_path)?;
     file.read_to_string(&mut abi_json)?;
     let abi = serde_json::from_str::<Abi>(&abi_json)?;
-    let provider = Provider::<Http>::try_from(rpc)?;
+    let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
     let contract = Contract::new(contract.parse::<Address>()?, abi, Arc::new(provider));
-    let current_deposit: U256 = contract.method::<_, U256>("getDeposit", tx_hash.parse::<Address>()?)?.call().await?;      // TODO: NEED THE FUNCTION DEFINITION 
+    let current_deposit: U256 = contract.method::<_, U256>("balanceOf", tx_hash.to_string())?.call().await?;     
     Ok(current_deposit)
 }
 

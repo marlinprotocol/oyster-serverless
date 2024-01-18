@@ -13,6 +13,7 @@ pub struct AppState {
     pub rpc: String,
     pub contract: String,
     pub signer: k256::ecdsa::SigningKey,
-    pub service_costs: Mutex<HashMap<String, u64>>,
+    pub operator_key: String,
+    pub service_costs: Mutex<HashMap<String, u128>>,
     pub hasher: Mutex<Keccak>,
 }

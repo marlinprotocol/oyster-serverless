@@ -1,12 +1,15 @@
 use std::collections::HashMap;
+use std::time::Duration;
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use serverless::billing_job;
 use tiny_keccak::Keccak;
 use tokio::fs;
 
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
+use tokio::time::interval;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -36,7 +39,7 @@ struct Args {
     contract: String,
 
     #[clap(long, value_parser)]
-    operator: String,
+    operator_key: String,
 
     #[clap(long, value_parser)]
     signer: String,
@@ -78,9 +81,11 @@ async fn main() -> anyhow::Result<()> {
         rpc: cli.rpc,
         contract: cli.contract,
         signer: signer,
+        operator_key: cli.operator_key,
         service_costs: HashMap::new().into(),
         hasher: Keccak::v256().into(),
     });
+    let app_data_clone = app_data.clone();
 
     let server = HttpServer::new(move || {
         App::new()
@@ -94,6 +99,20 @@ async fn main() -> anyhow::Result<()> {
     println!("Server started on port {}", port);
 
     server.await?;
+
+    tokio::spawn(async move {
+        let mut interval = interval(Duration::from_secs(600));           // TODO: FIX THE REGULAR INTERVAL 
+        loop {
+            interval.tick().await;
+
+            if !app_data_clone.service_costs.lock().unwrap().is_empty() {
+                match billing_job::billing_scheduler(app_data_clone.clone()).await {
+                    Ok(tx_hash) => println!("Transaction sent for billing: {}", tx_hash),
+                    Err(err) => println!("Error while sending billing transaction: {:?}", err),
+                }
+            }
+        }
+    });
 
     Ok(())
 }

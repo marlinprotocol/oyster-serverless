@@ -35,6 +35,7 @@ pub mod serverlesstest {
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
+                operator_key: String::new(),
                 service_costs: HashMap::new().into(),
                 hasher: Keccak::v256().into(),
             }))

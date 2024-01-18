@@ -273,7 +273,7 @@ pub async fn serverless(
     let execution_cost = 1 + 2*execution_time;               // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
     let mut map_guard = appstate.service_costs.lock().unwrap();
     let fee = map_guard.entry(tx_hash.to_string()).or_insert(0);
-    *fee += execution_cost as u64;
+    *fee += execution_cost;
     drop(map_guard);
 
     let mut hasher_guard = appstate.hasher.lock().unwrap();
