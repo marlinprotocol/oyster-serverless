@@ -66,6 +66,7 @@ pub async fn serverless(
         workerd_runtime_path,
         &appstate.rpc,
         &appstate.contract,
+        &appstate.abi,
     )
     .await
     {
@@ -95,7 +96,7 @@ pub async fn serverless(
     let execution_timer_start = Instant::now();
 
     // reserve cgroup
-    let cgroup = appstate.cgroups.lock().unwrap().reserve();
+    let cgroup = appstate.cgroups.lock().await.reserve();
     if let Err(err) = cgroup {
         // cleanup
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
@@ -122,7 +123,7 @@ pub async fn serverless(
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
         // cleanup
-        appstate.cgroups.lock().unwrap().release(cgroup);
+        appstate.cgroups.lock().await.release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
@@ -146,7 +147,7 @@ pub async fn serverless(
     // create config file
     if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
         // cleanup
-        appstate.cgroups.lock().unwrap().release(cgroup);
+        appstate.cgroups.lock().await.release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
@@ -182,7 +183,7 @@ pub async fn serverless(
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
-        appstate.cgroups.lock().unwrap().release(cgroup);
+        appstate.cgroups.lock().await.release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
@@ -208,7 +209,7 @@ pub async fn serverless(
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
-        appstate.cgroups.lock().unwrap().release(cgroup);
+        appstate.cgroups.lock().await.release(cgroup);
         workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
@@ -245,7 +246,7 @@ pub async fn serverless(
         .await
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
-    appstate.cgroups.lock().unwrap().release(cgroup);
+    appstate.cgroups.lock().await.release(cgroup);
     workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
         .await
         .context("CRITICAL: failed to clean up code file")
@@ -264,21 +265,17 @@ pub async fn serverless(
         ));
     }
     let (response, hash) = response.unwrap();
+    appstate.hasher.lock().await.update(&hash);
 
     let execution_timer_end = Instant::now();
     let execution_time = execution_timer_end
         .duration_since(execution_timer_start)
         .as_millis();
-
+    
     let execution_cost = 1 + 2*execution_time;               // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
-    let mut map_guard = appstate.service_costs.lock().unwrap();
+    let mut map_guard = appstate.service_costs.lock().await;
     let fee = map_guard.entry(tx_hash.to_string()).or_insert(0);
     *fee += execution_cost;
-    drop(map_guard);
-
-    let mut hasher_guard = appstate.hasher.lock().unwrap();
-    hasher_guard.update(&hash);
-    drop(hasher_guard);
 
     return response;
 }

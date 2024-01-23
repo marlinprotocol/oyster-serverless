@@ -1,5 +1,7 @@
 use crate::cgroups::Cgroups;
-use std::sync::{atomic::AtomicBool, Mutex};
+use std::sync::atomic::AtomicBool;
+use ethers::abi::Abi;
+use tokio::sync::Mutex;
 use std::collections::HashMap;
 use tiny_keccak::Keccak;
 
@@ -13,6 +15,7 @@ pub struct AppState {
     pub rpc: String,
     pub contract: String,
     pub signer: k256::ecdsa::SigningKey,
+    pub abi: Abi,
     pub operator_key: String,
     pub service_costs: Mutex<HashMap<String, u128>>,
     pub hasher: Mutex<Keccak>,

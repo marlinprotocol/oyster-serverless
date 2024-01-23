@@ -1,15 +1,15 @@
 use std::collections::HashMap;
-use std::time::Duration;
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use ethers::abi::Abi;
 use serverless::billing_job;
 use tiny_keccak::Keccak;
 use tokio::fs;
 
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
-use tokio::time::interval;
+use tokio::time::{interval, Duration};
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -73,6 +73,11 @@ async fn main() -> anyhow::Result<()> {
             .as_slice(),
     )
     .context("invalid signer key")?;
+             
+    let abi_json = fs::read_to_string("src/contract_abi.json")
+                            .await
+                            .context("failed to read contract ABI")?;
+    let abi = serde_json::from_str::<Abi>(&abi_json).context("failed to deserialize ABI")?;
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
@@ -81,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
         rpc: cli.rpc,
         contract: cli.contract,
         signer: signer,
+        abi: abi,
         operator_key: cli.operator_key,
         service_costs: HashMap::new().into(),
         hasher: Keccak::v256().into(),
@@ -105,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
         loop {
             interval.tick().await;
 
-            if !app_data_clone.service_costs.lock().unwrap().is_empty() {
+            if !app_data_clone.service_costs.lock().await.is_empty() {
                 match billing_job::billing_scheduler(app_data_clone.clone()).await {
                     Ok(tx_hash) => println!("Transaction sent for billing: {}", tx_hash),
                     Err(err) => println!("Error while sending billing transaction: {:?}", err),

@@ -1,4 +1,3 @@
-use std::io::Read;
 use std::process::Child;
 use std::time::{Duration, Instant};
 
@@ -15,7 +14,6 @@ use ethers::prelude::*;
 use ethers::core::abi::Abi;
 use tokio::io::AsyncWriteExt;
 use std::{convert::TryFrom, sync::Arc};
-use std::fs::File;
 
 use crate::cgroups::{Cgroups, CgroupsError};
 
@@ -56,17 +54,17 @@ pub enum ServerlessError {
 async fn get_current_deposit(
     tx_hash: &str, 
     rpc: &str, 
-    contract: &str,
+    contract_add: &str,
+    abi: &Abi,
 ) -> Result<U256, anyhow::Error> {
-    let abi_file_path = "src/contract_abi.json";           
-    let mut abi_json = String::new();
-    let mut file = File::open(abi_file_path)?;
-    file.read_to_string(&mut abi_json)?;
-    let abi = serde_json::from_str::<Abi>(&abi_json)?;
     let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
-    let contract = Contract::new(contract.parse::<Address>()?, abi, Arc::new(provider));
-    let current_deposit: U256 = contract.method::<_, U256>("balanceOf", tx_hash.to_string())?.call().await?;     
-    Ok(current_deposit)
+    let contract = Contract::new(
+                                                            contract_add.parse::<Address>()?, 
+                                                            abi.clone(), 
+                                                            Arc::new(provider));
+    Ok(contract.method::<_, U256>("balanceOf", tx_hash.to_string())?
+                                    .call()
+                                    .await?)   
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -94,11 +92,11 @@ pub async fn create_code_file(
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
+    abi: &Abi,
 ) -> Result<(), ServerlessError> {
-    let tx_deposit = match get_current_deposit(tx_hash, rpc, contract).await {
-        Ok(deposit_val) => Ok(deposit_val),
-        _ => Err(ServerlessError::TxDepositNotFound),
-    }?;
+    let tx_deposit = get_current_deposit(tx_hash, rpc, contract, abi)
+                            .await
+                            .map_err(|err| ServerlessError::TxDepositNotFound)?; 
 
     if tx_deposit <= U256::from(200) {                                // TODO: FIX THE FIXED MINIMUM VALUE
        return Err(ServerlessError::TxDepositNotEnough);

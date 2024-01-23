@@ -14,9 +14,10 @@ pub mod serverlesstest {
         error::Error,
         http, test, web, App,
     };
+    use ethers::abi::Abi;
     use serde_json::json;
     use tiny_keccak::Keccak;
-    use std::{sync::atomic::AtomicBool, collections::HashMap};
+    use std::{collections::HashMap, io::Read, sync::atomic::AtomicBool};
 
     fn new_app() -> App<
         impl ServiceFactory<
@@ -26,7 +27,12 @@ pub mod serverlesstest {
             InitError = (),
             Error = Error,
         >,
-    > {
+    > {         
+        let mut abi_json = String::new();
+        let mut file = std::fs::File::open("src/contract_abi.json").unwrap();
+        file.read_to_string(&mut abi_json).unwrap();
+        let abi = serde_json::from_str::<Abi>(&abi_json).unwrap();
+
         App::new()
             .app_data(web::Data::new(AppState {
                 cgroups: Cgroups::new().unwrap().into(),
@@ -34,6 +40,7 @@ pub mod serverlesstest {
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
+                abi: abi,
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
                 operator_key: String::new(),
                 service_costs: HashMap::new().into(),
