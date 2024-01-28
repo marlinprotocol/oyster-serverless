@@ -1,15 +1,16 @@
 use std::collections::HashMap;
-use actix_web::{web, App, HttpServer};
+
+use serverless::billing_job::billing_scheduler;
+use serverless::cgroups::Cgroups;
+use serverless::model::AppState;
+
+use actix_web::{App, HttpServer, web};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use ethers::abi::Abi;
-use serverless::billing_job;
 use tiny_keccak::Keccak;
 use tokio::fs;
-
-use serverless::cgroups::Cgroups;
-use serverless::model::AppState;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -39,7 +40,7 @@ struct Args {
     contract: String,
 
     #[clap(long, value_parser)]
-    operator_key: String,
+    operator_wallet_key: String,
 
     #[clap(long, value_parser)]
     signer: String,
@@ -74,10 +75,11 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("invalid signer key")?;
              
-    let abi_json = fs::read_to_string("src/contract_abi.json")
-                            .await
-                            .context("failed to read contract ABI")?;
-    let abi = serde_json::from_str::<Abi>(&abi_json).context("failed to deserialize ABI")?;
+    let abi_json_string = fs::read_to_string("src/contract_abi.json")
+        .await
+        .context("failed to read contract ABI")?;
+    let abi = serde_json::from_str::<Abi>(&abi_json_string)
+        .context("failed to deserialize ABI")?;
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
@@ -87,9 +89,9 @@ async fn main() -> anyhow::Result<()> {
         contract: cli.contract,
         signer: signer,
         abi: abi,
-        operator_key: cli.operator_key,
-        service_costs: HashMap::new().into(),
-        hasher: Keccak::v256().into(),
+        operator_wallet_key: cli.operator_wallet_key,
+        execution_costs: HashMap::new().into(),
+        billing_hasher: Keccak::v256().into(),
     });
     let app_data_clone = app_data.clone();
 
@@ -107,12 +109,14 @@ async fn main() -> anyhow::Result<()> {
     server.await?;
 
     tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(600));           // TODO: FIX THE REGULAR INTERVAL 
+        // TODO: FIX THE REGULAR INTERVAL
+        let mut interval = interval(Duration::from_secs(600));     
         loop {
             interval.tick().await;
 
-            if !app_data_clone.service_costs.lock().await.is_empty() {
-                match billing_job::billing_scheduler(app_data_clone.clone()).await {
+            if !app_data_clone.execution_costs.lock().await.is_empty() {
+                
+                match billing_scheduler(app_data_clone.clone()).await {
                     Ok(tx_hash) => println!("Transaction sent for billing: {}", tx_hash),
                     Err(err) => println!("Error while sending billing transaction: {:?}", err),
                 }

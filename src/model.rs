@@ -1,9 +1,11 @@
-use crate::cgroups::Cgroups;
 use std::sync::atomic::AtomicBool;
-use ethers::abi::Abi;
-use tokio::sync::Mutex;
 use std::collections::HashMap;
+
+use crate::cgroups::Cgroups;
+
+use ethers::abi::Abi;
 use tiny_keccak::Keccak;
+use tokio::sync::Mutex;
 
 pub struct AppState {
     pub cgroups: std::sync::Mutex<Cgroups>,
@@ -16,7 +18,7 @@ pub struct AppState {
     pub contract: String,
     pub signer: k256::ecdsa::SigningKey,
     pub abi: Abi,
-    pub operator_key: String,
-    pub service_costs: Mutex<HashMap<String, u128>>,
-    pub hasher: Mutex<Keccak>,
+    pub operator_wallet_key: String,
+    pub execution_costs: Mutex<HashMap<String, u128>>,
+    pub billing_hasher: Mutex<Keccak>,
 }

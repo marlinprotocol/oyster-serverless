@@ -5,6 +5,7 @@
 
 #[cfg(test)]
 pub mod serverlesstest {
+    use std::{collections::HashMap, fs::File, io::Read, sync::atomic::AtomicBool};
     use crate::cgroups::Cgroups;
     use crate::handler;
     use crate::model::AppState;
@@ -17,7 +18,6 @@ pub mod serverlesstest {
     use ethers::abi::Abi;
     use serde_json::json;
     use tiny_keccak::Keccak;
-    use std::{collections::HashMap, io::Read, sync::atomic::AtomicBool};
 
     fn new_app() -> App<
         impl ServiceFactory<
@@ -29,7 +29,7 @@ pub mod serverlesstest {
         >,
     > {         
         let mut abi_json = String::new();
-        let mut file = std::fs::File::open("src/contract_abi.json").unwrap();
+        let mut file = File::open("src/contract_abi.json").unwrap();
         file.read_to_string(&mut abi_json).unwrap();
         let abi = serde_json::from_str::<Abi>(&abi_json).unwrap();
 
@@ -42,9 +42,9 @@ pub mod serverlesstest {
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
                 abi: abi,
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
-                operator_key: String::new(),
-                service_costs: HashMap::new().into(),
-                hasher: Keccak::v256().into(),
+                operator_wallet_key: String::new(),                                    //TODO: ADD A WALLET KEY FOR RUNNING TESTS 
+                execution_costs: HashMap::new().into(),
+                billing_hasher: Keccak::v256().into(),
             }))
             .default_service(web::to(handler::serverless))
     }

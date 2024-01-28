@@ -1,21 +1,22 @@
+use std::{convert::TryFrom, sync::Arc};
 use std::process::Child;
 use std::time::{Duration, Instant};
 
-use thiserror::Error;
+use crate::cgroups::{Cgroups, CgroupsError};
 
 use actix_web::{HttpRequest, HttpResponse};
+use anyhow::Error;
+use ethers::core::abi::Abi;
+use ethers::prelude::*;
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::Client;
 use serde_json::{json, Value};
+use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
-use ethers::prelude::*;
-use ethers::core::abi::Abi;
-use tokio::io::AsyncWriteExt;
-use std::{convert::TryFrom, sync::Arc};
-
-use crate::cgroups::{Cgroups, CgroupsError};
 
 #[derive(Error, Debug)]
 pub enum ServerlessError {
@@ -56,7 +57,7 @@ async fn get_current_deposit(
     rpc: &str, 
     contract_add: &str,
     abi: &Abi,
-) -> Result<U256, anyhow::Error> {
+) -> Result<U256, Error> {
     let provider = Provider::<Http>::try_from(rpc)?
         .interval(Duration::from_millis(1000));
     let contract = Contract::new(
@@ -64,10 +65,10 @@ async fn get_current_deposit(
         abi.to_owned(), 
         Arc::new(provider));
 
-    let mut arg = [0u8; 32];
-    hex::decode_to_slice(&tx_hash[2..], &mut arg)?;  
+    let mut bytes32_tx_hash = [0u8; 32];
+    hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;  
 
-    let req = contract.method::<_, U256>("balanceOf", arg)?;
+    let req = contract.method::<_, U256>("balanceOf", bytes32_tx_hash)?;
     let deposit = req.call().await?;    
 
     Ok(deposit)   
@@ -103,8 +104,8 @@ pub async fn create_code_file(
     let tx_deposit = get_current_deposit(tx_hash, rpc, contract, abi)
         .await
         .map_err(|_| ServerlessError::TxDepositNotFound)?;
-
-    if tx_deposit <= U256::from(200) {                                // TODO: FIX THE FIXED MINIMUM VALUE
+    // TODO: FIX THE FIXED MINIMUM VALUE
+    if tx_deposit <= U256::from(200) {                                
        return Err(ServerlessError::TxDepositNotEnough);
     }
 
@@ -143,7 +144,7 @@ pub async fn create_code_file(
 
     // write calldata to file
     let mut file =
-        tokio::fs::File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
             .await
             .map_err(ServerlessError::CodeFileCreate)?;
     file.write_all(calldata.as_slice())
@@ -176,7 +177,7 @@ const oysterWorker :Workerd.Worker = (
     );
 
     let mut file =
-        tokio::fs::File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
             .await
             .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
