@@ -57,14 +57,20 @@ async fn get_current_deposit(
     contract_add: &str,
     abi: &Abi,
 ) -> Result<U256, anyhow::Error> {
-    let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
+    let provider = Provider::<Http>::try_from(rpc)?
+        .interval(Duration::from_millis(1000));
     let contract = Contract::new(
-                                                            contract_add.parse::<Address>()?, 
-                                                            abi.clone(), 
-                                                            Arc::new(provider));
-    Ok(contract.method::<_, U256>("balanceOf", tx_hash.to_string())?
-                                    .call()
-                                    .await?)   
+        contract_add.parse::<Address>()?, 
+        abi.to_owned(), 
+        Arc::new(provider));
+
+    let mut arg = [0u8; 32];
+    hex::decode_to_slice(&tx_hash[2..], &mut arg)?;  
+
+    let req = contract.method::<_, U256>("balanceOf", arg)?;
+    let deposit = req.call().await?;    
+
+    Ok(deposit)   
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -95,8 +101,8 @@ pub async fn create_code_file(
     abi: &Abi,
 ) -> Result<(), ServerlessError> {
     let tx_deposit = get_current_deposit(tx_hash, rpc, contract, abi)
-                            .await
-                            .map_err(|err| ServerlessError::TxDepositNotFound)?; 
+        .await
+        .map_err(|_| ServerlessError::TxDepositNotFound)?;
 
     if tx_deposit <= U256::from(200) {                                // TODO: FIX THE FIXED MINIMUM VALUE
        return Err(ServerlessError::TxDepositNotEnough);
