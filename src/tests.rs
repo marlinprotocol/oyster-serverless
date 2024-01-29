@@ -40,6 +40,7 @@ pub mod serverlesstest {
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
+                billing_contract: String::new(),                                      // TODO: ADD BILLING CONTRACT FOR TESTS
                 abi: abi,
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
                 operator_wallet_key: String::new(),                                    //TODO: ADD A WALLET KEY FOR RUNNING TESTS 

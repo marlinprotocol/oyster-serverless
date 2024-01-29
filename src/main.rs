@@ -40,6 +40,9 @@ struct Args {
     contract: String,
 
     #[clap(long, value_parser)]
+    billing_contract: String,
+
+    #[clap(long, value_parser)]
     operator_wallet_key: String,
 
     #[clap(long, value_parser)]
@@ -87,6 +90,7 @@ async fn main() -> anyhow::Result<()> {
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
         contract: cli.contract,
+        billing_contract: cli.billing_contract,
         signer: signer,
         abi: abi,
         operator_wallet_key: cli.operator_wallet_key,

@@ -67,6 +67,7 @@ pub async fn serverless(
         workerd_runtime_path,
         &appstate.rpc,
         &appstate.contract,
+        &appstate.billing_contract,
         &appstate.abi,
     )
     .await
@@ -279,6 +280,6 @@ pub async fn serverless(
     *amount += execution_cost;
 
     appstate.billing_hasher.lock().await.update(&hash);
-    
+
     return response;
 }

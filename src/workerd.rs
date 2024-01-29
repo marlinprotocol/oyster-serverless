@@ -55,15 +55,15 @@ pub enum ServerlessError {
 async fn get_current_deposit(
     tx_hash: &str, 
     rpc: &str, 
-    contract_add: &str,
+    billing_contract_add: &str,
     abi: &Abi,
 ) -> Result<U256, Error> {
     let provider = Provider::<Http>::try_from(rpc)?
         .interval(Duration::from_millis(1000));
     let contract = Contract::new(
-        contract_add.parse::<Address>()?, 
+        billing_contract_add.parse::<Address>()?, 
         abi.to_owned(), 
-        Arc::new(provider));
+        Arc::new(provider));    
 
     let mut bytes32_tx_hash = [0u8; 32];
     hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;  
@@ -99,16 +99,9 @@ pub async fn create_code_file(
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
+    billing_contract: &str,
     abi: &Abi,
 ) -> Result<(), ServerlessError> {
-    let tx_deposit = get_current_deposit(tx_hash, rpc, contract, abi)
-        .await
-        .map_err(|_| ServerlessError::TxDepositNotFound)?;
-    // TODO: FIX THE FIXED MINIMUM VALUE
-    if tx_deposit <= U256::from(200) {                                
-       return Err(ServerlessError::TxDepositNotEnough);
-    }
-
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
         Value::Null => Err(ServerlessError::TxNotFound),
@@ -134,6 +127,15 @@ pub async fn create_code_file(
         Value::String(calldata) => Ok(calldata),
         _ => Err(ServerlessError::InvalidTxCalldataType),
     }?;
+
+    // get tx deposit
+    let tx_deposit = get_current_deposit(tx_hash, rpc, billing_contract, abi)
+        .await
+        .map_err(|_| ServerlessError::TxDepositNotFound)?;
+    // TODO: FIX THE FIXED MINIMUM VALUE
+    if tx_deposit <= U256::from(200) {                                
+       return Err(ServerlessError::TxDepositNotEnough);
+    }
 
     // hex decode calldata by skipping to the code bytes
     let mut calldata = hex::decode(&calldata[138..])?;

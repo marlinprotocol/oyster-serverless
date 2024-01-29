@@ -5,7 +5,7 @@ use crate::model::AppState;
 
 use actix_web::web::Data;
 use anyhow::{anyhow, Context, Error};
-use ethers::prelude::*;
+use ethers::{abi::Token, prelude::*};
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use tiny_keccak::{Hasher, Keccak};
 
@@ -19,9 +19,9 @@ pub async fn billing_scheduler(appstate: Data<AppState>,) -> Result<String, Erro
 
     let client = SignerMiddleware::new(provider, wallet);
     let contract = Contract::new(
-        appstate.contract.as_str()
-                    .parse::<Address>()
-                    .context("Unable to parse contract address")?, 
+        appstate.billing_contract.as_str()
+            .parse::<Address>()
+            .context("Unable to parse contract address")?, 
         appstate.abi.to_owned(), 
         Arc::new(client));
 
@@ -50,13 +50,13 @@ pub async fn billing_scheduler(appstate: Data<AppState>,) -> Result<String, Erro
     
     let tx_request = contract.method::<_, H256>(
         "settle", 
-        (tx_hashes, amounts, signature.as_bytes().to_vec()))
+        (tx_hashes, amounts, Token::Bytes(signature.into_bytes())))
         .context("failed to build transaction request for billing")?;
     let pending_tx = tx_request
         .send()
         .await
         .context("Error while sending the billing transaction")?;
-    
+
     let tx_receipt = pending_tx
         .confirmations(7)
         .await
