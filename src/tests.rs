@@ -5,7 +5,6 @@
 
 #[cfg(test)]
 pub mod serverlesstest {
-    use std::{collections::HashMap, fs::File, io::Read, sync::atomic::AtomicBool};
     use crate::cgroups::Cgroups;
     use crate::handler;
     use crate::model::AppState;
@@ -15,8 +14,8 @@ pub mod serverlesstest {
         error::Error,
         http, test, web, App,
     };
-    use ethers::abi::Abi;
     use serde_json::json;
+    use std::{collections::HashMap, sync::atomic::AtomicBool};
     use tiny_keccak::Keccak;
 
     fn new_app() -> App<
@@ -27,12 +26,7 @@ pub mod serverlesstest {
             InitError = (),
             Error = Error,
         >,
-    > {         
-        let mut abi_json = String::new();
-        let mut file = File::open("src/contract_abi.json").unwrap();
-        file.read_to_string(&mut abi_json).unwrap();
-        let abi = serde_json::from_str::<Abi>(&abi_json).unwrap();
-
+    > {
         App::new()
             .app_data(web::Data::new(AppState {
                 cgroups: Cgroups::new().unwrap().into(),
@@ -40,10 +34,8 @@ pub mod serverlesstest {
                 runtime_path: "./runtime/".to_owned(),
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
-                billing_contract: String::new(),                                      // TODO: ADD BILLING CONTRACT FOR TESTS
-                abi: abi,
+                billing_contract: String::new(), // TODO: ADD BILLING CONTRACT FOR TESTS
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
-                operator_wallet_key: String::new(),                                    //TODO: ADD A WALLET KEY FOR RUNNING TESTS 
                 execution_costs: HashMap::new().into(),
                 billing_hasher: Keccak::v256().into(),
             }))

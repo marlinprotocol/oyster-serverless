@@ -1,6 +1,6 @@
-use std::{convert::TryFrom, sync::Arc};
 use std::process::Child;
 use std::time::{Duration, Instant};
+use std::{convert::TryFrom, sync::Arc};
 
 use crate::cgroups::{Cgroups, CgroupsError};
 
@@ -13,10 +13,10 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
-use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
+use tokio::{fs, fs::File};
 
 #[derive(Error, Debug)]
 pub enum ServerlessError {
@@ -53,25 +53,27 @@ pub enum ServerlessError {
 }
 
 async fn get_current_deposit(
-    tx_hash: &str, 
-    rpc: &str, 
+    tx_hash: &str,
+    rpc: &str,
     billing_contract_add: &str,
-    abi: &Abi,
 ) -> Result<U256, Error> {
-    let provider = Provider::<Http>::try_from(rpc)?
-        .interval(Duration::from_millis(1000));
+    let abi_json_string = fs::read_to_string("src/contract_abi.json").await?;
+    let abi = serde_json::from_str::<Abi>(&abi_json_string)?;
+
+    let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
     let contract = Contract::new(
-        billing_contract_add.parse::<Address>()?, 
-        abi.to_owned(), 
-        Arc::new(provider));    
+        billing_contract_add.parse::<Address>()?,
+        abi.to_owned(),
+        Arc::new(provider),
+    );
 
     let mut bytes32_tx_hash = [0u8; 32];
-    hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;  
+    hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
 
     let req = contract.method::<_, U256>("balanceOf", bytes32_tx_hash)?;
-    let deposit = req.call().await?;    
+    let deposit = req.call().await?;
 
-    Ok(deposit)   
+    Ok(deposit)
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -100,7 +102,6 @@ pub async fn create_code_file(
     rpc: &str,
     contract: &str,
     billing_contract: &str,
-    abi: &Abi,
 ) -> Result<(), ServerlessError> {
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
@@ -129,12 +130,12 @@ pub async fn create_code_file(
     }?;
 
     // get tx deposit
-    let tx_deposit = get_current_deposit(tx_hash, rpc, billing_contract, abi)
+    let tx_deposit = get_current_deposit(tx_hash, rpc, billing_contract)
         .await
         .map_err(|_| ServerlessError::TxDepositNotFound)?;
     // TODO: FIX THE FIXED MINIMUM VALUE
-    if tx_deposit <= U256::from(200) {                                
-       return Err(ServerlessError::TxDepositNotEnough);
+    if tx_deposit <= U256::from(200) {
+        return Err(ServerlessError::TxDepositNotEnough);
     }
 
     // hex decode calldata by skipping to the code bytes
@@ -251,7 +252,6 @@ pub async fn get_workerd_response(
     body: actix_web::web::Bytes,
     signer: &k256::ecdsa::SigningKey,
     host_header: &str,
-
 ) -> Result<(HttpResponse, [u8; 32]), anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");

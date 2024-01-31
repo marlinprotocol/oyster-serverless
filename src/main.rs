@@ -1,16 +1,13 @@
 use std::collections::HashMap;
 
-use serverless::billing_job::billing_scheduler;
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
 
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use ethers::abi::Abi;
 use tiny_keccak::Keccak;
 use tokio::fs;
-use tokio::time::{Duration, interval};
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -18,6 +15,9 @@ use tokio::time::{Duration, interval};
 struct Args {
     #[clap(long, value_parser, default_value = "6001")]
     port: u16,
+
+    #[clap(long, value_parser)]
+    bill_port: u16, // TODO: ADD THE DEFAULT PORT
 
     #[clap(long, value_parser, default_value = "./runtime/")]
     runtime_path: String,
@@ -40,10 +40,7 @@ struct Args {
     contract: String,
 
     #[clap(long, value_parser)]
-    billing_contract: String,
-
-    #[clap(long, value_parser)]
-    operator_wallet_key: String,
+    billing_contract: String, // TODO: ADD A DEFAULT ADDRESS
 
     #[clap(long, value_parser)]
     signer: String,
@@ -64,6 +61,7 @@ async fn main() -> anyhow::Result<()> {
     // println!("{:?}", response);
 
     let port: u16 = cli.port;
+    let bill_port: u16 = cli.bill_port;
 
     let cgroups = Cgroups::new().context("failed to construct cgroups")?;
     if cgroups.free.is_empty() {
@@ -77,12 +75,6 @@ async fn main() -> anyhow::Result<()> {
             .as_slice(),
     )
     .context("invalid signer key")?;
-             
-    let abi_json_string = fs::read_to_string("src/contract_abi.json")
-        .await
-        .context("failed to read contract ABI")?;
-    let abi = serde_json::from_str::<Abi>(&abi_json_string)
-        .context("failed to deserialize ABI")?;
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
@@ -92,8 +84,6 @@ async fn main() -> anyhow::Result<()> {
         contract: cli.contract,
         billing_contract: cli.billing_contract,
         signer: signer,
-        abi: abi,
-        operator_wallet_key: cli.operator_wallet_key,
         execution_costs: HashMap::new().into(),
         billing_hasher: Keccak::v256().into(),
     });
@@ -110,23 +100,18 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Server started on port {}", port);
 
-    server.await?;
+    let bill_server = HttpServer::new(move || {
+        App::new()
+            .app_data(app_data_clone.clone())
+            .default_service(web::to(serverless::bill_handler::bill_data))
+    })
+    .bind(("0.0.0.0", bill_port))
+    .context(format!("could not bind to port {bill_port}"))?
+    .run();
 
-    tokio::spawn(async move {
-        // TODO: FIX THE REGULAR INTERVAL
-        let mut interval = interval(Duration::from_secs(600));     
-        loop {
-            interval.tick().await;
+    println!("Bill Server started on port {}", bill_port);
 
-            if !app_data_clone.execution_costs.lock().await.is_empty() {
-                
-                match billing_scheduler(app_data_clone.clone()).await {
-                    Ok(tx_hash) => println!("Transaction sent for billing: {}", tx_hash),
-                    Err(err) => println!("Error while sending billing transaction: {:?}", err),
-                }
-            }
-        }
-    });
+    tokio::try_join!(server, bill_server)?;
 
     Ok(())
 }

@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
-use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
 use tiny_keccak::Hasher;
 use tokio::time::timeout;
@@ -68,7 +68,6 @@ pub async fn serverless(
         &appstate.rpc,
         &appstate.contract,
         &appstate.billing_contract,
-        &appstate.abi,
     )
     .await
     {
@@ -272,14 +271,19 @@ pub async fn serverless(
     let execution_time = execution_timer_end
         .duration_since(execution_timer_start)
         .as_millis();
-    
-    // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
-    let execution_cost = 1 + 2*execution_time;             
-    let mut costs_guard = appstate.execution_costs.lock().await;
-    let amount = costs_guard.entry(tx_hash.to_string()).or_insert(0);
-    *amount += execution_cost;
 
-    appstate.billing_hasher.lock().await.update(&hash);
+    // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
+    let execution_cost = 1 + 2 * execution_time;
+
+    appstate
+        .execution_costs
+        .lock()
+        .unwrap()
+        .entry(tx_hash.to_owned())
+        .and_modify(|cost| *cost += execution_cost)
+        .or_insert(execution_cost);
+
+    appstate.billing_hasher.lock().unwrap().update(&hash);
 
     return response;
 }
