@@ -6,17 +6,22 @@ use crate::cgroups::{Cgroups, CgroupsError};
 
 use actix_web::{HttpRequest, HttpResponse};
 use anyhow::Error;
-use ethers::core::abi::Abi;
 use ethers::prelude::*;
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::Client;
 use serde_json::{json, Value};
 use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
+use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
-use tokio::{fs, fs::File};
+
+abigen!(
+    BillingContract,
+    "src/contracts/billing_contract_abi.json",
+    derives(serde::Serialize, serde::Deserialize)
+);
 
 #[derive(Error, Debug)]
 pub enum ServerlessError {
@@ -57,21 +62,14 @@ async fn get_current_deposit(
     rpc: &str,
     billing_contract_add: &str,
 ) -> Result<U256, Error> {
-    let abi_json_string = fs::read_to_string("src/contract_abi.json").await?;
-    let abi = serde_json::from_str::<Abi>(&abi_json_string)?;
-
     let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
-    let contract = Contract::new(
-        billing_contract_add.parse::<Address>()?,
-        abi.to_owned(),
-        Arc::new(provider),
-    );
+    let contract =
+        BillingContract::new(billing_contract_add.parse::<Address>()?, Arc::new(provider));
 
     let mut bytes32_tx_hash = [0u8; 32];
     hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
 
-    let req = contract.method::<_, U256>("balanceOf", bytes32_tx_hash)?;
-    let deposit = req.call().await?;
+    let deposit = contract.balance_of(bytes32_tx_hash).call().await?;
 
     Ok(deposit)
 }
