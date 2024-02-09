@@ -6,7 +6,6 @@ use serverless::model::AppState;
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use tiny_keccak::Keccak;
 use tokio::fs;
 
 /// Simple program to greet a person
@@ -85,7 +84,6 @@ async fn main() -> anyhow::Result<()> {
         billing_contract: cli.billing_contract,
         signer: signer,
         execution_costs: HashMap::new().into(),
-        billing_hasher: Keccak::v256().into(),
     });
     let app_data_clone = app_data.clone();
 

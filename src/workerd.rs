@@ -250,7 +250,7 @@ pub async fn get_workerd_response(
     body: actix_web::web::Bytes,
     signer: &k256::ecdsa::SigningKey,
     host_header: &str,
-) -> Result<(HttpResponse, [u8; 32]), anyhow::Error> {
+) -> Result<HttpResponse, anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(b"|oyster-serverless-hasher|");
 
@@ -313,5 +313,5 @@ pub async fn get_workerd_response(
     actix_resp.insert_header(("X-Oyster-Timestamp", timestamp.to_string()));
     actix_resp.insert_header(("X-Oyster-Signature", hex::encode(signature.as_slice())));
 
-    Ok((actix_resp.body(response_body), hash))
+    Ok(actix_resp.body(response_body))
 }

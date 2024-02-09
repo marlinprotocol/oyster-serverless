@@ -3,8 +3,6 @@ use std::sync::{atomic::AtomicBool, Mutex};
 
 use crate::cgroups::Cgroups;
 
-use tiny_keccak::Keccak;
-
 pub struct AppState {
     pub cgroups: Mutex<Cgroups>,
     // IMPORTANT: we use Relaxed ordering here since we do not need to synchronize any memory
@@ -17,5 +15,4 @@ pub struct AppState {
     pub billing_contract: String,
     pub signer: k256::ecdsa::SigningKey,
     pub execution_costs: Mutex<HashMap<String, u128>>,
-    pub billing_hasher: Mutex<Keccak>,
 }

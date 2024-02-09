@@ -8,11 +8,35 @@ use tiny_keccak::{Hasher, Keccak};
 
 pub async fn billing_data(appstate: Data<AppState>) -> HttpResponse {
     let mut costs_gaurd = appstate.execution_costs.lock().unwrap();
-    let costs_map = costs_gaurd.clone();
+
+    if costs_gaurd.is_empty() {
+        return HttpResponse::BadRequest().body("Bill is empty");
+    }
+
+    let tx_hashes: Vec<String> = costs_gaurd.keys().cloned().collect();
+    let amounts: Vec<u128> = costs_gaurd.values().cloned().collect();
+
+    let mut hasher = Keccak::v256();
+    hasher.update(b"|txhashes|");
+    hasher.update(
+        tx_hashes
+            .iter()
+            .flat_map(|txhash| txhash.as_bytes().to_vec())
+            .collect::<Vec<u8>>()
+            .as_slice(),
+    );
+    hasher.update(b"|amounts|");
+    hasher.update(
+        amounts
+            .iter()
+            .flat_map(|amount| amount.to_be_bytes().to_vec())
+            .collect::<Vec<u8>>()
+            .as_slice(),
+    );
 
     let mut hash = [0u8; 32];
-    let mut hasher_gaurd = appstate.billing_hasher.lock().unwrap();
-    hasher_gaurd.clone().finalize(&mut hash);
+    hasher.finalize(&mut hash);
+
     let sign = appstate
         .signer
         .sign_prehash_recoverable(&hash)
@@ -24,10 +48,10 @@ pub async fn billing_data(appstate: Data<AppState>) -> HttpResponse {
     let signature = hex::encode(rs.to_bytes().append(27 + v.to_byte()).as_slice());
 
     costs_gaurd.clear();
-    hasher_gaurd.clone_from(&Keccak::v256());
 
     HttpResponse::Ok().json(json!({
-        "execution_costs": costs_map,
+        "txhashes": tx_hashes,
+        "amounts": amounts,
         "signature": signature,
     }))
 }

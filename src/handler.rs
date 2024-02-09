@@ -7,7 +7,6 @@ use crate::{cgroups, model::AppState, workerd};
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
-use tiny_keccak::Hasher;
 use tokio::time::timeout;
 
 pub async fn serverless(
@@ -265,7 +264,7 @@ pub async fn serverless(
             anyhow!(err).context("failed to get a response")
         ));
     }
-    let (response, hash) = response.unwrap();
+    let response = response.unwrap();
 
     let execution_timer_end = Instant::now();
     let execution_time = execution_timer_end
@@ -282,8 +281,6 @@ pub async fn serverless(
         .entry(tx_hash.to_owned())
         .and_modify(|cost| *cost += execution_cost)
         .or_insert(execution_cost);
-
-    appstate.billing_hasher.lock().unwrap().update(&hash);
 
     return response;
 }

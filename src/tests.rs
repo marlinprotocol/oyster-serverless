@@ -16,7 +16,6 @@ pub mod serverlesstest {
     };
     use serde_json::json;
     use std::{collections::HashMap, sync::atomic::AtomicBool};
-    use tiny_keccak::Keccak;
 
     fn new_app() -> App<
         impl ServiceFactory<
@@ -37,7 +36,6 @@ pub mod serverlesstest {
                 billing_contract: String::new(), // TODO: ADD BILLING CONTRACT FOR TESTS
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
                 execution_costs: HashMap::new().into(),
-                billing_hasher: Keccak::v256().into(),
             }))
             .default_service(web::to(handler::serverless))
     }
