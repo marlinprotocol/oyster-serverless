@@ -17,7 +17,7 @@ struct Args {
     port: u16,
 
     #[clap(long, value_parser)]
-    bill_port: u16, // TODO: ADD THE DEFAULT PORT
+    billing_port: u16, // TODO: ADD THE DEFAULT PORT
 
     #[clap(long, value_parser, default_value = "./runtime/")]
     runtime_path: String,
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     // println!("{:?}", response);
 
     let port: u16 = cli.port;
-    let bill_port: u16 = cli.bill_port;
+    let billing_port: u16 = cli.billing_port;
 
     let cgroups = Cgroups::new().context("failed to construct cgroups")?;
     if cgroups.free.is_empty() {
@@ -100,18 +100,18 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Server started on port {}", port);
 
-    let bill_server = HttpServer::new(move || {
+    let billing_server = HttpServer::new(move || {
         App::new()
             .app_data(app_data_clone.clone())
-            .default_service(web::to(serverless::bill_handler::bill_data))
+            .default_service(web::to(serverless::billing_handler::billing_data))
     })
-    .bind(("0.0.0.0", bill_port))
-    .context(format!("could not bind to port {bill_port}"))?
+    .bind(("0.0.0.0", billing_port))
+    .context(format!("could not bind to port {billing_port}"))?
     .run();
 
-    println!("Bill Server started on port {}", bill_port);
+    println!("Billing Server started on port {}", billing_port);
 
-    tokio::try_join!(server, bill_server)?;
+    tokio::try_join!(server, billing_server)?;
 
     Ok(())
 }

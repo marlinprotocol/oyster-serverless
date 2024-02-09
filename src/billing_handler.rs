@@ -6,7 +6,7 @@ use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use serde_json::json;
 use tiny_keccak::{Hasher, Keccak};
 
-pub async fn bill_data(appstate: Data<AppState>) -> HttpResponse {
+pub async fn billing_data(appstate: Data<AppState>) -> HttpResponse {
     let mut costs_gaurd = appstate.execution_costs.lock().unwrap();
     let costs_map = costs_gaurd.clone();
 

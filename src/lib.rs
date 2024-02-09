@@ -1,4 +1,4 @@
-pub mod bill_handler;
+pub mod billing_handler;
 pub mod cgroups;
 pub mod handler;
 pub mod model;
