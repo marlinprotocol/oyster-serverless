@@ -1,11 +1,16 @@
+use std::sync::Arc;
 use std::collections::HashMap;
+use std::time::Duration;
 
+use serverless::BillingContract;
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
 
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use ethers::providers::{Http, Provider};
+use ethers::types::Address;
 use tokio::fs;
 
 /// Simple program to greet a person
@@ -75,14 +80,21 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("invalid signer key")?;
 
+    let rpc_provider = Provider::<Http>::try_from(&cli.rpc)
+        .context("Failed to connect to the rpc")?
+        .interval(Duration::from_millis(1000));
+    let billing_contract = BillingContract::new(
+        cli.billing_contract.parse::<Address>().context("Failed to parse billing contract address")?, 
+        Arc::new(rpc_provider));
+
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
         contract: cli.contract,
-        billing_contract: cli.billing_contract,
         signer: signer,
+        billing_contract: billing_contract,
         execution_costs: HashMap::new().into(),
     });
     let app_data_clone = app_data.clone();

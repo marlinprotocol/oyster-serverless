@@ -1,7 +1,11 @@
 use std::collections::HashMap;
-use std::sync::{atomic::AtomicBool, Mutex};
+use std::sync::atomic::AtomicBool;
+use std::sync::Mutex;
 
+use crate::BillingContract;
 use crate::cgroups::Cgroups;
+
+use ethers::providers::{Http, Provider};
 
 pub struct AppState {
     pub cgroups: Mutex<Cgroups>,
@@ -12,7 +16,7 @@ pub struct AppState {
     pub runtime_path: String,
     pub rpc: String,
     pub contract: String,
-    pub billing_contract: String,
     pub signer: k256::ecdsa::SigningKey,
+    pub billing_contract: BillingContract<Provider<Http>>,
     pub execution_costs: Mutex<HashMap<String, u128>>,
 }

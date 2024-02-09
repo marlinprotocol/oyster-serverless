@@ -1,7 +1,7 @@
 use std::process::Child;
 use std::time::{Duration, Instant};
-use std::{convert::TryFrom, sync::Arc};
 
+use crate::BillingContract;
 use crate::cgroups::{Cgroups, CgroupsError};
 
 use actix_web::{HttpRequest, HttpResponse};
@@ -16,12 +16,6 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
-
-abigen!(
-    BillingContract,
-    "src/contracts/billing_contract_abi.json",
-    derives(serde::Serialize, serde::Deserialize)
-);
 
 #[derive(Error, Debug)]
 pub enum ServerlessError {
@@ -59,17 +53,15 @@ pub enum ServerlessError {
 
 async fn get_current_deposit(
     tx_hash: &str,
-    rpc: &str,
-    billing_contract_add: &str,
+    billing_contract: &BillingContract<Provider<Http>>,
 ) -> Result<U256, Error> {
-    let provider = Provider::<Http>::try_from(rpc)?.interval(Duration::from_millis(1000));
-    let contract =
-        BillingContract::new(billing_contract_add.parse::<Address>()?, Arc::new(provider));
-
     let mut bytes32_tx_hash = [0u8; 32];
     hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
 
-    let deposit = contract.balance_of(bytes32_tx_hash).call().await?;
+    let deposit = billing_contract
+        .balance_of(bytes32_tx_hash)
+        .call()
+        .await?;
 
     Ok(deposit)
 }
@@ -99,7 +91,7 @@ pub async fn create_code_file(
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
-    billing_contract: &str,
+    billing_contract: &BillingContract<Provider<Http>>,
 ) -> Result<(), ServerlessError> {
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
@@ -128,7 +120,7 @@ pub async fn create_code_file(
     }?;
 
     // get tx deposit
-    let tx_deposit = get_current_deposit(tx_hash, rpc, billing_contract)
+    let tx_deposit = get_current_deposit(tx_hash, billing_contract)
         .await
         .map_err(|_| ServerlessError::TxDepositNotFound)?;
     // TODO: FIX THE FIXED MINIMUM VALUE
