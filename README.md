@@ -8,6 +8,7 @@ Oyster Serverless is a cutting-edge, high-performance serverless computing platf
 
 * build-essential 
 * libc++1
+* cgroup-tools
 
 `Note : Oyster serverless only works on Ubuntu 22.04 and newer versions due to limitations in the workerd dependency.`
 
