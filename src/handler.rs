@@ -2,8 +2,8 @@ use std::io::{BufRead, BufReader};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
-use crate::{cgroups, workerd};
 use crate::model::AppState;
+use crate::{cgroups, workerd};
 
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
@@ -248,10 +248,10 @@ pub async fn serverless(
     let execution_time = execution_timer_end
         .duration_since(execution_timer_start)
         .as_millis();
-    
+
     // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
     let execution_cost = 1 + 2 * execution_time;
-    
+
     appstate
         .execution_costs
         .lock()

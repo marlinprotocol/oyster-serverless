@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 
-use crate::BillingContract;
 use crate::cgroups::Cgroups;
+use crate::BillingContract;
 
 use ethers::providers::{Http, Provider};
 

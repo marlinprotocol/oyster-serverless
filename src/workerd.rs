@@ -1,8 +1,8 @@
 use std::process::Child;
 use std::time::{Duration, Instant};
 
-use crate::BillingContract;
 use crate::cgroups::{Cgroups, CgroupsError};
+use crate::BillingContract;
 
 use actix_web::{HttpRequest, HttpResponse};
 use anyhow::Error;
@@ -58,10 +58,7 @@ async fn get_current_deposit(
     let mut bytes32_tx_hash = [0u8; 32];
     hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
 
-    let deposit = billing_contract
-        .balance_of(bytes32_tx_hash)
-        .call()
-        .await?;
+    let deposit = billing_contract.balance_of(bytes32_tx_hash).call().await?;
 
     Ok(deposit)
 }

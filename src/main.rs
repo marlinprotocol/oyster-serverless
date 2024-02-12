@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
-use serverless::BillingContract;
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
+use serverless::BillingContract;
 
 use actix_web::{web, App, HttpServer};
 use anyhow::{anyhow, Context};
@@ -84,8 +84,11 @@ async fn main() -> anyhow::Result<()> {
         .context("Failed to connect to the rpc")?
         .interval(Duration::from_millis(1000));
     let billing_contract = BillingContract::new(
-        cli.billing_contract.parse::<Address>().context("Failed to parse billing contract address")?, 
-        Arc::new(rpc_provider));
+        cli.billing_contract
+            .parse::<Address>()
+            .context("Failed to parse billing contract address")?,
+        Arc::new(rpc_provider),
+    );
 
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
