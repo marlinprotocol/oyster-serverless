@@ -13,19 +13,14 @@ pub struct SigningData {
     txhashes: Vec<String>,
 }
 
-#[get("/bill")]
+#[get("/billing/inspect")]
 pub async fn get_bill(appstate: Data<AppState>) -> impl Responder {
-    let bill = appstate.execution_costs.lock().unwrap().clone();
-    if bill.is_empty() {
-        return HttpResponse::NoContent().body("No bill data available");
-    }
-
     HttpResponse::Ok().json(json!({
-        "bill": bill,
+        "bill": appstate.execution_costs.lock().unwrap().clone(),
     }))
 }
 
-#[post("/sign")]
+#[post("/billing/export")]
 pub async fn sign_data(appstate: Data<AppState>, data: Json<SigningData>) -> impl Responder {
     let signing_data = data.into_inner();
     if signing_data.nonce.is_empty() {
@@ -36,13 +31,21 @@ pub async fn sign_data(appstate: Data<AppState>, data: Json<SigningData>) -> imp
         return HttpResponse::BadRequest().body("List of tx hashes must not be empty");
     }
 
-    let mut signed_data: Vec<u8> = Vec::new();
+    let mut bytes32_nonce = [0u8; 32];
+    if let Err(err) = hex::decode_to_slice(&signing_data.nonce, &mut bytes32_nonce) {
+        return HttpResponse::BadRequest()
+            .body(format!("Error decoding nonce into 32 bytes: {}", err));
+    }
+
+    let mut signed_data: Vec<u8> = bytes32_nonce.to_vec();
     for txhash in signing_data.txhashes {
         if let Some(cost) = appstate.execution_costs.lock().unwrap().remove(&txhash) {
             let mut bytes32_txhash = [0u8; 32];
             if let Err(err) = hex::decode_to_slice(&txhash[2..], &mut bytes32_txhash) {
-                return HttpResponse::InternalServerError()
-                    .body(format!("Error decoding transaction hash: {:?}", err));
+                return HttpResponse::InternalServerError().body(format!(
+                    "Error decoding transaction hash into 32 bytes: {}",
+                    err
+                ));
             }
 
             signed_data.append(&mut bytes32_txhash.to_vec());
@@ -54,7 +57,6 @@ pub async fn sign_data(appstate: Data<AppState>, data: Json<SigningData>) -> imp
             ));
         }
     }
-    signed_data.append(&mut signing_data.nonce.as_bytes().to_vec());
 
     let mut hasher = Keccak::v256();
     hasher.update(&signed_data);
