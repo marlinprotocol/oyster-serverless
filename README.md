@@ -22,15 +22,15 @@ sudo ./cgroupv2_setup.sh
 <b>Run the serverless application :</b>
 
 ```
-cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust
+cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust --signer ./path/to/signer
 ```
 
 <b>Make a request to the serveless application :</b>
 
 This transaction hash contains the JavaScript code that finds the prime factors of a given number :
-<a href="https://goerli.arbiscan.io/tx/0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113">0xc7d9122f583971d4801747ab24cf3e83984274b8d565349ed53a73e0a547d113</a>
+<a href="https://sepolia.arbiscan.io/tx/0x0a4ab35079a6bd757636d49e4e9a360e4040c746853b8a778e607b752aeab76d">0x0a4ab35079a6bd757636d49e4e9a360e4040c746853b8a778e607b752aeab76d</a>
 
-Endpoint (POST) : `http://Y7MREL2YHFY5JAAXI6VSJTZ6QOMEE5FY2VSTJHWVHJZ6BJKH2EJQ.localhost:6000`
+Endpoint (POST) : `http://BJFLGUDZU26XK5RW2SPE5GRWBZAEBR2GQU5YU54OMB5XKKXKW5WQ.localhost:6000`
 
 JSON body :
 

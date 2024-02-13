@@ -22,14 +22,14 @@ struct Args {
     #[clap(
         long,
         value_parser,
-        default_value = "https://goerli-rollup.arbitrum.io/rpc"
+        default_value = "https://sepolia-rollup.arbitrum.io/rpc"
     )]
     rpc: String,
 
     #[clap(
         long,
         value_parser,
-        default_value = "0x30694a76d737211a908d0dd672f47e1d29fbfb02"
+        default_value = "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1"
     )]
     contract: String,
 
