@@ -17,28 +17,5 @@
 		],
 		"stateMutability": "view",
 		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32[]",
-				"name": "_txhashes",
-				"type": "bytes32[]"
-			},
-			{
-				"internalType": "uint256[]",
-				"name": "_amounts",
-				"type": "uint256[]"
-			},
-			{
-				"internalType": "bytes",
-				"name": "signature",
-				"type": "bytes"
-			}
-		],
-		"name": "settle",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	}
 ]

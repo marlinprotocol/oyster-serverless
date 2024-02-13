@@ -6,7 +6,7 @@ use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
 use serverless::BillingContract;
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use ethers::providers::{Http, Provider};
@@ -116,7 +116,9 @@ async fn main() -> anyhow::Result<()> {
     let billing_server = HttpServer::new(move || {
         App::new()
             .app_data(app_data_clone.clone())
-            .default_service(web::to(serverless::billing_handler::billing_data))
+            .service(serverless::billing_handler::get_bill)
+            .service(serverless::billing_handler::sign_data)
+            .default_service(web::to(HttpResponse::NotFound))
     })
     .bind(("0.0.0.0", billing_port))
     .context(format!("could not bind to port {billing_port}"))?

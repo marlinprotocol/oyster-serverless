@@ -2,7 +2,7 @@ use std::process::Child;
 use std::time::{Duration, Instant};
 
 use crate::cgroups::{Cgroups, CgroupsError};
-use crate::BillingContract;
+use crate::BillContract;
 
 use actix_web::{HttpRequest, HttpResponse};
 use anyhow::Error;
@@ -53,7 +53,7 @@ pub enum ServerlessError {
 
 async fn get_current_deposit(
     tx_hash: &str,
-    billing_contract: &BillingContract<Provider<Http>>,
+    billing_contract: &BillContract,
 ) -> Result<U256, Error> {
     let mut bytes32_tx_hash = [0u8; 32];
     hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
@@ -88,7 +88,7 @@ pub async fn create_code_file(
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
-    billing_contract: &BillingContract<Provider<Http>>,
+    billing_contract: &BillContract,
 ) -> Result<(), ServerlessError> {
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
