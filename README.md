@@ -17,6 +17,10 @@ Oyster Serverless is a cutting-edge, high-performance serverless computing platf
 sudo ./cgroupv2_setup.sh
 ```
 
+<b>Signer file setup</b>
+
+A signer secret is required to run the serverless applicaton. The signer must be a `secp256k1` binary secret.
+
 ## Running serverless application
 
 <b>Run the serverless application :</b>
