@@ -38,8 +38,8 @@ COPY setup.sh ./
 RUN chmod +x setup.sh
 
 # your custom setup goes here
-COPY ./serverlessrust ./
-RUN chmod +x serverlessrust
+COPY ./oyster-serverless ./
+RUN chmod +x oyster-serverless
 
 # entry point
 ENTRYPOINT [ "/app/setup.sh" ]

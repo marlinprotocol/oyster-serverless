@@ -22,7 +22,7 @@ sudo ./cgroupv2_setup.sh
 <b>Run the serverless application :</b>
 
 ```
-cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64-unknown-linux-musl/release/serverlessrust --signer ./path/to/signer
+cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64-unknown-linux-musl/release/oyster-serverless --signer ./path/to/signer
 ```
 
 <b>Make a request to the serveless application :</b>
