@@ -48,7 +48,6 @@ pub async fn serverless(
             .body("successfully set server in draining state");
     }
 
-    let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
     let workerd_runtime_path = &appstate.runtime_path;
 
     // decode base32 into hex
@@ -62,7 +61,6 @@ pub async fn serverless(
     // create code file
     if let Err(err) = workerd::create_code_file(
         tx_hash,
-        slug,
         workerd_runtime_path,
         &appstate.rpc,
         &appstate.contract,
@@ -97,7 +95,7 @@ pub async fn serverless(
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
     if let Err(err) = cgroup {
         // cleanup
-        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -122,7 +120,7 @@ pub async fn serverless(
     if let Err(err) = port {
         // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -143,10 +141,10 @@ pub async fn serverless(
     let port = port.unwrap();
 
     // create config file
-    if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
+    if let Err(err) = workerd::create_config_file(tx_hash, workerd_runtime_path, port).await {
         // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -174,15 +172,15 @@ pub async fn serverless(
     }
 
     // start worker
-    let child = workerd::execute(tx_hash, slug, workerd_runtime_path, &cgroup).await;
+    let child = workerd::execute(tx_hash, workerd_runtime_path, &cgroup).await;
     if let Err(err) = child {
         // cleanup
-        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -203,12 +201,12 @@ pub async fn serverless(
             .kill()
             .context("CRITICAL: failed to kill worker {cgroup}")
             .unwrap_or_else(|err| println!("{err:?}"));
-        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up code file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -240,12 +238,12 @@ pub async fn serverless(
         .kill()
         .context("CRITICAL: failed to kill worker {cgroup}")
         .unwrap_or_else(|err| println!("{err:?}"));
-    workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+    workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
         .await
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
     appstate.cgroups.lock().unwrap().release(cgroup);
-    workerd::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+    workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
         .await
         .context("CRITICAL: failed to clean up code file")
         .unwrap_or_else(|err| println!("{err:?}"));

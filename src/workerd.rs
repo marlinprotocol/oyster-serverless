@@ -66,7 +66,6 @@ async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest
 
 pub async fn create_code_file(
     tx_hash: &str,
-    slug: &str,
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
@@ -105,10 +104,9 @@ pub async fn create_code_file(
     calldata.truncate(calldata.len() - idx);
 
     // write calldata to file
-    let mut file =
-        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
-            .await
-            .map_err(ServerlessError::CodeFileCreate)?;
+    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")
+        .await
+        .map_err(ServerlessError::CodeFileCreate)?;
     file.write_all(calldata.as_slice())
         .await
         .map_err(ServerlessError::CodeFileCreate)?;
@@ -117,7 +115,6 @@ pub async fn create_code_file(
 
 pub async fn create_config_file(
     tx_hash: &str,
-    slug: &str,
     workerd_runtime_path: &str,
     free_port: u16,
 ) -> Result<(), ServerlessError> {
@@ -131,15 +128,14 @@ const oysterConfig :Workerd.Config = (
 );
 
 const oysterWorker :Workerd.Worker = (
-  serviceWorkerScript = embed \"{tx_hash}-{slug}.js\",
+  serviceWorkerScript = embed \"{tx_hash}.js\",
   compatibilityDate = \"2022-09-16\",
 );"
     );
 
-    let mut file =
-        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
-            .await
-            .map_err(ServerlessError::ConfigFileCreate)?;
+    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp")
+        .await
+        .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
@@ -155,14 +151,13 @@ pub fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
 // TODO: timeouts?
 pub async fn execute(
     tx_hash: &str,
-    slug: &str,
     workerd_runtime_path: &str,
     cgroup: &str,
 ) -> Result<Child, ServerlessError> {
     let args = [
         &(workerd_runtime_path.to_owned() + "/workerd"),
         "serve",
-        &(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp"),
+        &(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp"),
         "--verbose",
     ];
 
@@ -183,10 +178,9 @@ pub async fn wait_for_port(port: u16) -> bool {
 
 pub async fn cleanup_code_file(
     tx_hash: &str,
-    slug: &str,
     workerd_runtime_path: &str,
 ) -> Result<(), ServerlessError> {
-    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")
         .await
         .map_err(ServerlessError::CodeFileDelete)?;
     Ok(())
@@ -194,10 +188,9 @@ pub async fn cleanup_code_file(
 
 pub async fn cleanup_config_file(
     tx_hash: &str,
-    slug: &str,
     workerd_runtime_path: &str,
 ) -> Result<(), ServerlessError> {
-    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp")
         .await
         .map_err(ServerlessError::ConfigFileDelete)?;
     Ok(())
