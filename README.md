@@ -20,6 +20,7 @@ sudo ./cgroupv2_setup.sh
 <b>Signer file setup</b>
 
 A signer secret is required to run the serverless applicaton. The signer must be a `secp256k1` binary secret.
+The <a href="https://github.com/marlinprotocol/keygen">Keygen repo</a> can be used to generate this.
 
 ## Running serverless application
 
