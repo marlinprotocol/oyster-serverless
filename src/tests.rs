@@ -53,6 +53,7 @@ pub mod serverlesstest {
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
                 billing_contract: billing_contract,
                 execution_costs: HashMap::new().into(),
+                last_bill_claim: (None, None).into(),
             }))
             .default_service(web::to(handler::serverless))
     }

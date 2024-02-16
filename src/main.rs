@@ -99,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
         signer: signer,
         billing_contract: billing_contract,
         execution_costs: HashMap::new().into(),
+        last_bill_claim: (None, None).into(),
     });
     let app_data_clone = app_data.clone();
 
@@ -116,8 +117,9 @@ async fn main() -> anyhow::Result<()> {
     let billing_server = HttpServer::new(move || {
         App::new()
             .app_data(app_data_clone.clone())
-            .service(serverless::billing_handler::get_bill)
-            .service(serverless::billing_handler::sign_data)
+            .service(serverless::billing_handler::inspect_bill)
+            .service(serverless::billing_handler::get_last_bill_claim)
+            .service(serverless::billing_handler::export_bill)
             .default_service(web::to(HttpResponse::NotFound))
     })
     .bind(("0.0.0.0", billing_port))

@@ -17,4 +17,5 @@ pub struct AppState {
     pub signer: k256::ecdsa::SigningKey,
     pub billing_contract: BillContract,
     pub execution_costs: Mutex<HashMap<String, u128>>,
+    pub last_bill_claim: Mutex<(Option<String>, Option<String>)>,
 }

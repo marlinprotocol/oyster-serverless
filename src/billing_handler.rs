@@ -2,7 +2,7 @@ use crate::model::AppState;
 
 use actix_web::web::{Data, Json};
 use actix_web::{get, post, HttpResponse, Responder};
-use anyhow::Context;
+use k256::ecdsa::SigningKey;
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use serde_json::json;
 use tiny_keccak::{Hasher, Keccak};
@@ -10,24 +10,65 @@ use tiny_keccak::{Hasher, Keccak};
 #[derive(Debug, serde::Deserialize)]
 pub struct SigningData {
     nonce: String,
-    txhashes: Vec<String>,
+    tx_hashes: Vec<String>,
 }
 
 #[get("/billing/inspect")]
-pub async fn get_bill(appstate: Data<AppState>) -> impl Responder {
+pub async fn inspect_bill(appstate: Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(json!({
         "bill": appstate.execution_costs.lock().unwrap().clone(),
     }))
 }
 
+#[get("/billing/latest")]
+pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
+    let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
+    if last_bill_claim_guard.0.is_none() {
+        return HttpResponse::Ok().body("No bill claimed yet");
+    }
+
+    if last_bill_claim_guard.1.is_some() {
+        return HttpResponse::Ok().json(json!({
+            "bill_claim_data": last_bill_claim_guard.0.clone().unwrap(),
+            "signature": last_bill_claim_guard.1.clone().unwrap(),
+        }));
+    }
+
+    let bill_claim_data = hex::decode(last_bill_claim_guard.0.clone().unwrap());
+    if bill_claim_data.is_err() {
+        return HttpResponse::InternalServerError().body(format!(
+            "Failed to decode claimed bill data: {}",
+            bill_claim_data.unwrap_err()
+        ));
+    }
+
+    let bill_claim_data = bill_claim_data.unwrap();
+    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
+    if signature.is_err() {
+        return HttpResponse::InternalServerError().body(format!(
+            "Failed to sign billing data: {}",
+            signature.unwrap_err()
+        ));
+    }
+
+    let bill_claim_data = hex::encode(bill_claim_data.as_slice());
+    let signature = signature.unwrap();
+    last_bill_claim_guard.1 = Some(signature.clone());
+
+    HttpResponse::Ok().json(json!({
+        "bill_claim_data": bill_claim_data,
+        "signature": signature,
+    }))
+}
+
 #[post("/billing/export")]
-pub async fn sign_data(appstate: Data<AppState>, data: Json<SigningData>) -> impl Responder {
+pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> impl Responder {
     let signing_data = data.into_inner();
     if signing_data.nonce.is_empty() {
         return HttpResponse::BadRequest().body("Nonce must not be empty");
     }
 
-    if signing_data.txhashes.is_empty() {
+    if signing_data.tx_hashes.is_empty() {
         return HttpResponse::BadRequest().body("List of tx hashes must not be empty");
     }
 
@@ -37,47 +78,60 @@ pub async fn sign_data(appstate: Data<AppState>, data: Json<SigningData>) -> imp
             .body(format!("Error decoding nonce into 32 bytes: {}", err));
     }
 
-    let mut signed_data: Vec<u8> = bytes32_nonce.to_vec();
-    for txhash in signing_data.txhashes {
-        if let Some(cost) = appstate.execution_costs.lock().unwrap().remove(&txhash) {
-            let mut bytes32_txhash = [0u8; 32];
-            if let Err(err) = hex::decode_to_slice(&txhash[2..], &mut bytes32_txhash) {
-                return HttpResponse::InternalServerError().body(format!(
-                    "Error decoding transaction hash into 32 bytes: {}",
-                    err
-                ));
+    let mut bill_claim_data = bytes32_nonce.to_vec();
+    for tx_hash in signing_data.tx_hashes {
+        if let Some(cost) = appstate.execution_costs.lock().unwrap().remove(&tx_hash) {
+            let mut bytes32_tx_hash = [0u8; 32];
+            if let Err(_) = hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash) {
+                continue;
             }
 
-            signed_data.append(&mut bytes32_txhash.to_vec());
-            signed_data.append(&mut cost.to_be_bytes().to_vec());
-        } else {
-            return HttpResponse::BadRequest().body(format!(
-                "{} tx hash doesn't exist in the current bill",
-                txhash
-            ));
+            bill_claim_data.append(&mut bytes32_tx_hash.to_vec());
+            bill_claim_data.append(&mut cost.to_be_bytes().to_vec());
         }
     }
 
+    if bill_claim_data.len() == 32 {
+        return HttpResponse::BadRequest().body("No tx present in the bill");
+    }
+
+    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
+    if signature.is_err() {
+        appstate
+            .last_bill_claim
+            .lock()
+            .unwrap()
+            .0
+            .clone_from(&Some(hex::encode(bill_claim_data.as_slice())));
+
+        return HttpResponse::InternalServerError().body(format!(
+            "Failed to sign billing data: {}",
+            signature.unwrap_err()
+        ));
+    }
+
+    let signature = signature.unwrap();
+    let bill_claim_data = hex::encode(bill_claim_data.as_slice());
+
+    let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
+    last_bill_claim_guard.0 = Some(bill_claim_data.clone());
+    last_bill_claim_guard.1 = Some(signature.clone());
+
+    HttpResponse::Ok().json(json!({
+        "bill_claim_data": bill_claim_data,
+        "signature": signature,
+    }))
+}
+
+async fn sign_data(data: &[u8], signer: &SigningKey) -> Result<String, anyhow::Error> {
     let mut hasher = Keccak::v256();
-    hasher.update(&signed_data);
+    hasher.update(data);
 
     let mut hash = [0u8; 32];
     hasher.finalize(&mut hash);
 
-    let sign = appstate
-        .signer
-        .sign_prehash_recoverable(&hash)
-        .context("Failed to sign billing data");
-    if sign.is_err() {
-        return HttpResponse::InternalServerError().body(format!("{}", sign.unwrap_err()));
-    }
-    let (rs, v) = sign.unwrap();
-
+    let (rs, v) = signer.sign_prehash_recoverable(&hash)?;
     let signature = hex::encode(rs.to_bytes().append(27 + v.to_byte()).as_slice());
-    let signed_data = hex::encode(signed_data.as_slice());
 
-    HttpResponse::Ok().json(json!({
-        "signed_data": signed_data,
-        "signature": signature,
-    }))
+    return Ok(signature);
 }
