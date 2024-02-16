@@ -78,10 +78,12 @@ pub async fn serverless(
                 "{:?}",
                 anyhow!(err).context("failed to create code file")
             )),
-            CodeFileCreate(_) => HttpResponse::InternalServerError().body(format!(
-                "{:?}",
-                anyhow!(err).context("failed to create code file")
-            )),
+            CodeFileCreate(_) | CodeFileCount(_) | UpdateModifiedTime(_) => {
+                HttpResponse::InternalServerError().body(format!(
+                    "{:?}",
+                    anyhow!(err).context("failed to create code file")
+                ))
+            }
             _ => HttpResponse::InternalServerError().body(format!(
                 "{:?}",
                 anyhow!(err).context("unexpected error while trying to create code file")
@@ -94,12 +96,6 @@ pub async fn serverless(
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
     if let Err(err) = cgroup {
-        // cleanup
-        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-            .await
-            .context("CRITICAL: failed to clean up code file")
-            .unwrap_or_else(|err| println!("{err:?}"));
-
         return match err {
             cgroups::CgroupsError::NoFree => {
                 return HttpResponse::TooManyRequests().body(format!(
@@ -118,13 +114,7 @@ pub async fn serverless(
     // get port for cgroup
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
-        // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-            .await
-            .context("CRITICAL: failed to clean up code file")
-            .unwrap_or_else(|err| println!("{err:?}"));
-
         return match err {
             workerd::ServerlessError::BadPort(_) => {
                 return HttpResponse::InternalServerError().body(format!(
@@ -142,13 +132,7 @@ pub async fn serverless(
 
     // create config file
     if let Err(err) = workerd::create_config_file(tx_hash, workerd_runtime_path, port).await {
-        // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-            .await
-            .context("CRITICAL: failed to clean up code file")
-            .unwrap_or_else(|err| println!("{err:?}"));
-
         use workerd::ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
@@ -180,10 +164,6 @@ pub async fn serverless(
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-            .await
-            .context("CRITICAL: failed to clean up code file")
-            .unwrap_or_else(|err| println!("{err:?}"));
 
         return HttpResponse::BadRequest().body(format!(
             "{:?}",
@@ -206,10 +186,6 @@ pub async fn serverless(
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
-        workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-            .await
-            .context("CRITICAL: failed to clean up code file")
-            .unwrap_or_else(|err| println!("{err:?}"));
 
         let stderr = child.stderr.take().unwrap();
         let reader = BufReader::new(stderr);
@@ -243,10 +219,6 @@ pub async fn serverless(
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
     appstate.cgroups.lock().unwrap().release(cgroup);
-    workerd::cleanup_code_file(tx_hash, workerd_runtime_path)
-        .await
-        .context("CRITICAL: failed to clean up code file")
-        .unwrap_or_else(|err| println!("{err:?}"));
 
     if let Err(err) = response {
         return HttpResponse::RequestTimeout()

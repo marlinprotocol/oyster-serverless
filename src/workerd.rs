@@ -1,12 +1,13 @@
+use std::fs;
 use std::process::Child;
-use std::time::{Duration, Instant};
-
-use thiserror::Error;
+use std::time::{Duration, Instant, SystemTime};
 
 use actix_web::{HttpRequest, HttpResponse};
+use filetime;
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::Client;
 use serde_json::{json, Value};
+use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -43,6 +44,10 @@ pub enum ServerlessError {
     ConfigFileDelete(#[source] tokio::io::Error),
     #[error("failed to retrieve port from cgroup")]
     BadPort(#[source] std::num::ParseIntError),
+    #[error("failed to retrieve number of code files")]
+    CodeFileCount(#[source] tokio::io::Error),
+    #[error("failed to update modified time of file")]
+    UpdateModifiedTime(#[source] tokio::io::Error),
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -64,12 +69,64 @@ async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest
     Ok(json_response)
 }
 
+async fn get_number_of_code_files(workerd_runtime_path: &str) -> usize {
+    fs::read_dir(workerd_runtime_path.to_owned())
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            let path = entry.path();
+            path.is_file()
+                && path.file_name().map_or(false, |name| {
+                    let name = name.to_string_lossy();
+                    name.starts_with("0x") && name.ends_with(".js")
+                })
+        })
+        .count()
+}
+
 pub async fn create_code_file(
     tx_hash: &str,
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
 ) -> Result<(), ServerlessError> {
+    if fs::metadata(&(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")).is_ok() {
+        let current_time = filetime::FileTime::now();
+        filetime::set_file_times(
+            &(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js"),
+            current_time,
+            current_time,
+        )
+        .map_err(ServerlessError::UpdateModifiedTime)?;
+        return Ok(());
+    }
+
+    let no_of_files = get_number_of_code_files(workerd_runtime_path).await;
+
+    if no_of_files >= 40 {
+        let mut file_to_delete = String::new();
+        let mut file_modified_time = SystemTime::now();
+
+        for entry in fs::read_dir(workerd_runtime_path.to_owned()).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+
+            if file_name.starts_with("0x") && file_name.ends_with(".js") {
+                let metadata = fs::metadata(path.clone()).unwrap();
+                let modified_time = metadata.modified().unwrap();
+
+                if modified_time < file_modified_time {
+                    file_to_delete = file_name.to_string();
+                    file_modified_time = modified_time;
+                }
+            }
+        }
+
+        fs::remove_file(workerd_runtime_path.to_owned() + "/" + &file_to_delete)
+            .map_err(ServerlessError::CodeFileDelete)?;
+    }
+
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
         Value::Null => Err(ServerlessError::TxNotFound),
@@ -174,16 +231,6 @@ pub async fn wait_for_port(port: u16) -> bool {
         }
     }
     false
-}
-
-pub async fn cleanup_code_file(
-    tx_hash: &str,
-    workerd_runtime_path: &str,
-) -> Result<(), ServerlessError> {
-    tokio::fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js")
-        .await
-        .map_err(ServerlessError::CodeFileDelete)?;
-    Ok(())
 }
 
 pub async fn cleanup_config_file(
