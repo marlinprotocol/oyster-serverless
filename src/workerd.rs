@@ -185,8 +185,10 @@ const oysterConfig :Workerd.Config = (
 );
 
 const oysterWorker :Workerd.Worker = (
-  serviceWorkerScript = embed \"{tx_hash}.js\",
-  compatibilityDate = \"2022-09-16\",
+  modules = [
+    (name = \"main\", esModule = embed \"{tx_hash}.js\")
+  ],
+  compatibilityDate = \"2023-03-07\",
 );"
     );
 
