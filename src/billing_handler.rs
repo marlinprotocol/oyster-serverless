@@ -24,7 +24,7 @@ pub async fn inspect_bill(appstate: Data<AppState>) -> impl Responder {
 pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
     let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
     if last_bill_claim_guard.0.is_none() {
-        return HttpResponse::Ok().body("No bill claimed yet");
+        return HttpResponse::BadRequest().body("No bill claimed yet!");
     }
 
     if last_bill_claim_guard.1.is_some() {
@@ -65,17 +65,17 @@ pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
 pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> impl Responder {
     let signing_data = data.into_inner();
     if signing_data.nonce.is_empty() {
-        return HttpResponse::BadRequest().body("Nonce must not be empty");
+        return HttpResponse::BadRequest().body("Nonce must not be empty!");
     }
 
     if signing_data.tx_hashes.is_empty() {
-        return HttpResponse::BadRequest().body("List of tx hashes must not be empty");
+        return HttpResponse::BadRequest().body("List of transaction hashes must not be empty!");
     }
 
     let mut bytes32_nonce = [0u8; 32];
     if let Err(err) = hex::decode_to_slice(&signing_data.nonce, &mut bytes32_nonce) {
         return HttpResponse::BadRequest()
-            .body(format!("Error decoding nonce into 32 bytes: {}", err));
+            .body(format!("Failed to decode nonce into 32 bytes: {}", err));
     }
 
     let mut bill_claim_data = bytes32_nonce.to_vec();
@@ -92,7 +92,8 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
     }
 
     if bill_claim_data.len() == 32 {
-        return HttpResponse::BadRequest().body("No tx present in the bill");
+        return HttpResponse::BadRequest()
+            .body("Given transaction hashes are not present in billing data");
     }
 
     let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
