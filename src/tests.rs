@@ -348,8 +348,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                // "0x552c228915ef5ed6ce05ef7384bb980be2e911bd48c86a3be28ef92d35499c52.oyster.run",
-                "kuwcfciv55pnntqf55zyjo4ybprosen5jdeguo7cr34s2nkjtrja.oyster.run",
+                // "0x96179f60fd7917c04ad9da6dd64690a1a960f39b50029d07919bf2628f5e7fe5.oyster.run",
+                "SYLZ6YH5PEL4ASWZ3JW5MRUQUGUWB443KABJ2B4RTPZGFD26P7SQ.oyster.run",
             ))
             .set_json(&payload)
             .to_request();
@@ -359,7 +359,7 @@ pub mod serverlesstest {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
         assert_eq!(
             resp.into_body().try_into_bytes().unwrap(),
-            "syntax error in the code: service main: Uncaught SyntaxError: Unexpected identifier 'data'\n  at main:1:118"
+            "syntax error in the code: service main: Uncaught SyntaxError: Unexpected token 'export'\n  at main:1:1"
         );
     }
 
