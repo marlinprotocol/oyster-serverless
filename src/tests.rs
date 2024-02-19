@@ -103,7 +103,7 @@ pub mod serverlesstest {
             .append_header((
                 "Host",
                 // "0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e.oyster.run",
-                "srulw2uoqxwrdyuszdfmbqkttx3jdsgy5rropw72t4n5p5ie4rxa.oyster.run",
+                "SRULW2UOQXWRDYUSZDFMBQKTTX3JDSGY5RROPW72T4N5P5IE4RXA.oyster.run",
             ))
             .set_json(&json!({
                 "num": 10
@@ -120,7 +120,7 @@ pub mod serverlesstest {
             .append_header((
                 "Host",
                 // "0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e.oyster.run",
-                "srulw2uoqxwrdyuszdfmbqkttx3jdsgy5rropw72t4n5p5ie4rxa.oyster.run",
+                "SRULW2UOQXWRDYUSZDFMBQKTTX3JDSGY5RROPW72T4N5P5IE4RXA.oyster.run",
             ))
             .set_json(&json!({
                 "num": 20
@@ -137,7 +137,7 @@ pub mod serverlesstest {
             .append_header((
                 "Host",
                 // "0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e.oyster.run",
-                "srulw2uoqxwrdyuszdfmbqkttx3jdsgy5rropw72t4n5p5ie4rxa.oyster.run",
+                "SRULW2UOQXWRDYUSZDFMBQKTTX3JDSGY5RROPW72T4N5P5IE4RXA.oyster.run",
             ))
             .set_json(&json!({
                 "num": 600
@@ -348,8 +348,8 @@ pub mod serverlesstest {
             .uri("/")
             .append_header((
                 "Host",
-                // "0x552c228915ef5ed6ce05ef7384bb980be2e911bd48c86a3be28ef92d35499c52.oyster.run",
-                "kuwcfciv55pnntqf55zyjo4ybprosen5jdeguo7cr34s2nkjtrja.oyster.run",
+                // "0x96179f60fd7917c04ad9da6dd64690a1a960f39b50029d07919bf2628f5e7fe5.oyster.run",
+                "SYLZ6YH5PEL4ASWZ3JW5MRUQUGUWB443KABJ2B4RTPZGFD26P7SQ.oyster.run",
             ))
             .set_json(&payload)
             .to_request();
@@ -359,7 +359,7 @@ pub mod serverlesstest {
         assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
         assert_eq!(
             resp.into_body().try_into_bytes().unwrap(),
-            "syntax error in the code: service main: Uncaught SyntaxError: Unexpected identifier 'data'\n  at main:1:118"
+            "syntax error in the code: service main: Uncaught SyntaxError: Unexpected token 'export'\n  at main:1:1"
         );
     }
 
@@ -399,7 +399,7 @@ pub mod serverlesstest {
             .append_header((
                 "Host",
                 // "0x9c641b535e5586200d0f2fd81f05a39436c0d9dd35530e9fb3ca18352c3ba111.oyster.run",
-                "TRSBWU26KWDCADIPF7MB6BNDSQ3MBWO5GVJQ5H5TZIMDKLB3UEIQ.oyster.run",
+                "TNJKQVX65RLEDOOL5LW5CWQ2RUHF2LSQQIBXXXNFSVMRLLFOLKIQ.oyster.run",
             ))
             .set_json(&payload)
             .to_request();
@@ -426,7 +426,7 @@ pub mod serverlesstest {
             .append_header((
                 "Host",
                 // "0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e.oyster.run",
-                "6F73TEOGJDUL3SJ7FXH4ZQS4TB3UBBHOJLRZR4FSRHTJROMZEMB0.oyster.run",
+                "SRULW2UOQXWRDYUSZDFMBQKTTX3JDSGY5RROPW72T4N5P5IE4RX0.oyster.run",
             ))
             .set_json(&payload)
             .to_request();
