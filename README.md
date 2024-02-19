@@ -33,9 +33,9 @@ cargo build --release --target x86_64-unknown-linux-musl && sudo ./target/x86_64
 <b>Make a request to the serveless application :</b>
 
 This transaction hash contains the JavaScript code that finds the prime factors of a given number :
-<a href="https://sepolia.arbiscan.io/tx/0x0a4ab35079a6bd757636d49e4e9a360e4040c746853b8a778e607b752aeab76d">0x0a4ab35079a6bd757636d49e4e9a360e4040c746853b8a778e607b752aeab76d</a>
+<a href="https://sepolia.arbiscan.io/tx/0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e">0x9468bb6a8e85ed11e292c8cac0c1539df691c8d8ec62e7dbfa9f1bd7f504e46e</a>
 
-Endpoint (POST) : `http://BJFLGUDZU26XK5RW2SPE5GRWBZAEBR2GQU5YU54OMB5XKKXKW5WQ.localhost:6000`
+Endpoint (POST) : `http://srulw2uoqxwrdyuszdfmbqkttx3jdsgy5rropw72t4n5p5ie4rxa.localhost:6000`
 
 JSON body :
 
