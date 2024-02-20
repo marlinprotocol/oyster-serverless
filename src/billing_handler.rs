@@ -51,12 +51,11 @@ pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
         ));
     }
 
-    let bill_claim_data = hex::encode(bill_claim_data.as_slice());
     let signature = signature.unwrap();
     last_bill_claim_guard.1 = Some(signature.clone());
 
     HttpResponse::Ok().json(json!({
-        "bill_claim_data": bill_claim_data,
+        "bill_claim_data": last_bill_claim_guard.0.clone().unwrap(),
         "signature": signature,
     }))
 }
