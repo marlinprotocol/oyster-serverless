@@ -47,7 +47,7 @@ pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
         ));
     };
 
-    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
+    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer);
     let Ok(signature) = signature else {
         return HttpResponse::InternalServerError().body(format!(
             "Failed to sign billing data: {}",
@@ -99,11 +99,11 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
             .body("Given transaction hashes are not present in billing data");
     }
 
-    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
+    let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer);
     let bill_claim_data = hex::encode(bill_claim_data.as_slice());
 
     let Ok(signature) = signature else {
-        appstate.last_bill_claim.lock().unwrap().0 = Some(bill_claim_data);
+        *appstate.last_bill_claim.lock().unwrap() = (Some(bill_claim_data), None);
 
         return HttpResponse::InternalServerError().body(format!(
             "Failed to sign billing data: {}",
@@ -120,7 +120,7 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
     return response;
 }
 
-async fn sign_data(data: &[u8], signer: &SigningKey) -> Result<String, anyhow::Error> {
+fn sign_data(data: &[u8], signer: &SigningKey) -> Result<String, anyhow::Error> {
     let mut hasher = Keccak::v256();
     hasher.update(data);
 
