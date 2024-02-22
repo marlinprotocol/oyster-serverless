@@ -23,39 +23,37 @@ pub async fn inspect_bill(appstate: Data<AppState>) -> impl Responder {
 #[get("/billing/latest")]
 pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
     let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
-    if last_bill_claim_guard.0.is_none() {
+    let Some(bill_data_hex) = last_bill_claim_guard.0.clone() else {
         return HttpResponse::BadRequest().body("No bill claimed yet!");
-    }
+    };
 
-    if last_bill_claim_guard.1.is_some() {
+    if let Some(signature) = last_bill_claim_guard.1.clone() {
         return HttpResponse::Ok().json(json!({
-            "bill_claim_data": last_bill_claim_guard.0.clone().unwrap(),
-            "signature": last_bill_claim_guard.1.clone().unwrap(),
+            "bill_claim_data": bill_data_hex,
+            "signature": signature,
         }));
     }
 
-    let bill_claim_data = hex::decode(last_bill_claim_guard.0.clone().unwrap());
-    if bill_claim_data.is_err() {
+    let bill_claim_data = hex::decode(&bill_data_hex);
+    let Ok(bill_claim_data) = bill_claim_data else {
         return HttpResponse::InternalServerError().body(format!(
             "Failed to decode claimed bill data: {}",
             bill_claim_data.unwrap_err()
         ));
-    }
+    };
 
-    let bill_claim_data = bill_claim_data.unwrap();
     let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
-    if signature.is_err() {
+    let Ok(signature) = signature else {
         return HttpResponse::InternalServerError().body(format!(
             "Failed to sign billing data: {}",
             signature.unwrap_err()
         ));
-    }
+    };
 
-    let signature = signature.unwrap();
     last_bill_claim_guard.1 = Some(signature.clone());
 
     HttpResponse::Ok().json(json!({
-        "bill_claim_data": last_bill_claim_guard.0.clone().unwrap(),
+        "bill_claim_data": bill_data_hex,
         "signature": signature,
     }))
 }
@@ -96,7 +94,7 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
     }
 
     let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
-    if signature.is_err() {
+    let Ok(signature) = signature else {
         appstate
             .last_bill_claim
             .lock()
@@ -108,9 +106,8 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
             "Failed to sign billing data: {}",
             signature.unwrap_err()
         ));
-    }
+    };
 
-    let signature = signature.unwrap();
     let bill_claim_data = hex::encode(bill_claim_data.as_slice());
 
     let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
