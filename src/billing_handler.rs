@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 use crate::model::AppState;
 
 use actix_web::web::{Data, Json};
@@ -15,26 +17,29 @@ pub struct SigningData {
 
 #[get("/billing/inspect")]
 pub async fn inspect_bill(appstate: Data<AppState>) -> impl Responder {
+    // Can replace with 'appstate.execution_costs.lock().unwrap().clone()' if turns out cloning is faster then Json creation!!
     HttpResponse::Ok().json(json!({
-        "bill": appstate.execution_costs.lock().unwrap().clone(),
+        "bill": *appstate.execution_costs.lock().unwrap(),
     }))
 }
 
 #[get("/billing/latest")]
 pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
     let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
-    let Some(bill_data_hex) = last_bill_claim_guard.0.clone() else {
+    let last_bill_claim = last_bill_claim_guard.deref_mut();
+
+    let Some(bill_data_hex) = &last_bill_claim.0 else {
         return HttpResponse::BadRequest().body("No bill claimed yet!");
     };
 
-    if let Some(signature) = last_bill_claim_guard.1.clone() {
+    if let Some(signature) = &last_bill_claim.1 {
         return HttpResponse::Ok().json(json!({
             "bill_claim_data": bill_data_hex,
             "signature": signature,
         }));
     }
 
-    let bill_claim_data = hex::decode(&bill_data_hex);
+    let bill_claim_data = hex::decode(bill_data_hex);
     let Ok(bill_claim_data) = bill_claim_data else {
         return HttpResponse::InternalServerError().body(format!(
             "Failed to decode claimed bill data: {}",
@@ -50,12 +55,13 @@ pub async fn get_last_bill_claim(appstate: Data<AppState>) -> impl Responder {
         ));
     };
 
-    last_bill_claim_guard.1 = Some(signature.clone());
-
-    HttpResponse::Ok().json(json!({
+    let response = HttpResponse::Ok().json(json!({
         "bill_claim_data": bill_data_hex,
         "signature": signature,
-    }))
+    }));
+
+    last_bill_claim.1 = Some(signature);
+    return response;
 }
 
 #[post("/billing/export")]
@@ -94,13 +100,10 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
     }
 
     let signature = sign_data(bill_claim_data.as_slice(), &appstate.signer).await;
+    let bill_claim_data = hex::encode(bill_claim_data.as_slice());
+
     let Ok(signature) = signature else {
-        appstate
-            .last_bill_claim
-            .lock()
-            .unwrap()
-            .0
-            .clone_from(&Some(hex::encode(bill_claim_data.as_slice())));
+        appstate.last_bill_claim.lock().unwrap().0 = Some(bill_claim_data);
 
         return HttpResponse::InternalServerError().body(format!(
             "Failed to sign billing data: {}",
@@ -108,16 +111,13 @@ pub async fn export_bill(appstate: Data<AppState>, data: Json<SigningData>) -> i
         ));
     };
 
-    let bill_claim_data = hex::encode(bill_claim_data.as_slice());
-
-    let mut last_bill_claim_guard = appstate.last_bill_claim.lock().unwrap();
-    last_bill_claim_guard.0 = Some(bill_claim_data.clone());
-    last_bill_claim_guard.1 = Some(signature.clone());
-
-    HttpResponse::Ok().json(json!({
+    let response = HttpResponse::Ok().json(json!({
         "bill_claim_data": bill_claim_data,
         "signature": signature,
-    }))
+    }));
+
+    *appstate.last_bill_claim.lock().unwrap() = (Some(bill_claim_data), Some(signature));
+    return response;
 }
 
 async fn sign_data(data: &[u8], signer: &SigningKey) -> Result<String, anyhow::Error> {
