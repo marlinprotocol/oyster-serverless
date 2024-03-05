@@ -84,6 +84,34 @@ async fn get_number_of_code_files(workerd_runtime_path: &str) -> usize {
         .count()
 }
 
+async fn delete_oldest_code_file(workerd_runtime_path: &str) -> Result<(), tokio::io::Error> {
+    let mut file_to_delete = String::new();
+    let mut file_modified_time = SystemTime::now();
+
+    for entry in fs::read_dir(workerd_runtime_path.to_owned()).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+
+        if file_name.starts_with("0x") && file_name.ends_with(".js") {
+            let metadata = fs::metadata(path.clone()).unwrap();
+            let modified_time = metadata.modified().unwrap();
+
+            if modified_time < file_modified_time {
+                file_to_delete = file_name.to_string();
+                file_modified_time = modified_time;
+            }
+        }
+    }
+
+    if let Err(err) = fs::remove_file(workerd_runtime_path.to_owned() + "/" + &file_to_delete) {
+        if err.kind() != std::io::ErrorKind::NotFound {
+            return Err(err);
+        }
+    }
+    Ok(())
+}
+
 pub async fn create_code_file(
     tx_hash: &str,
     workerd_runtime_path: &str,
@@ -104,26 +132,8 @@ pub async fn create_code_file(
     let no_of_files = get_number_of_code_files(workerd_runtime_path).await;
 
     if no_of_files >= 40 {
-        let mut file_to_delete = String::new();
-        let mut file_modified_time = SystemTime::now();
-
-        for entry in fs::read_dir(workerd_runtime_path.to_owned()).unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            let file_name = path.file_name().unwrap().to_str().unwrap();
-
-            if file_name.starts_with("0x") && file_name.ends_with(".js") {
-                let metadata = fs::metadata(path.clone()).unwrap();
-                let modified_time = metadata.modified().unwrap();
-
-                if modified_time < file_modified_time {
-                    file_to_delete = file_name.to_string();
-                    file_modified_time = modified_time;
-                }
-            }
-        }
-
-        fs::remove_file(workerd_runtime_path.to_owned() + "/" + &file_to_delete)
+        delete_oldest_code_file(workerd_runtime_path)
+            .await
             .map_err(ServerlessError::CodeFileDelete)?;
     }
 
