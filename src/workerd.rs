@@ -226,6 +226,7 @@ pub async fn create_code_file(
 
 pub async fn create_config_file(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
     free_port: u16,
 ) -> Result<(), ServerlessError> {
@@ -246,9 +247,10 @@ const oysterWorker :Workerd.Worker = (
 );"
     );
 
-    let mut file = File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp")
-        .await
-        .map_err(ServerlessError::ConfigFileCreate)?;
+    let mut file =
+        File::create(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
+            .await
+            .map_err(ServerlessError::ConfigFileCreate)?;
     file.write_all(capnp_data.as_bytes())
         .await
         .map_err(ServerlessError::ConfigFileCreate)?;
@@ -264,13 +266,14 @@ pub fn get_port(cgroup: &str) -> Result<u16, ServerlessError> {
 // TODO: timeouts?
 pub async fn execute(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
     cgroup: &str,
 ) -> Result<Child, ServerlessError> {
     let args = [
         &(workerd_runtime_path.to_owned() + "/workerd"),
         "serve",
-        &(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp"),
+        &(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp"),
         "--verbose",
     ];
 
@@ -291,9 +294,10 @@ pub async fn wait_for_port(port: u16) -> bool {
 
 pub async fn cleanup_config_file(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
 ) -> Result<(), ServerlessError> {
-    fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + ".capnp")
+    fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".capnp")
         .await
         .map_err(ServerlessError::ConfigFileDelete)?;
     Ok(())

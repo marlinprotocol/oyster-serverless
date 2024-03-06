@@ -129,9 +129,10 @@ pub async fn serverless(
         };
     }
     let port = port.unwrap();
+    let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
 
     // create config file
-    if let Err(err) = workerd::create_config_file(tx_hash, workerd_runtime_path, port).await {
+    if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
         appstate.cgroups.lock().unwrap().release(cgroup);
         use workerd::ServerlessError::*;
         return match err {
@@ -156,10 +157,10 @@ pub async fn serverless(
     }
 
     // start worker
-    let child = workerd::execute(tx_hash, workerd_runtime_path, &cgroup).await;
+    let child = workerd::execute(tx_hash, slug, workerd_runtime_path, &cgroup).await;
     if let Err(err) = child {
         // cleanup
-        workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
+        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -181,7 +182,7 @@ pub async fn serverless(
             .kill()
             .context("CRITICAL: failed to kill worker {cgroup}")
             .unwrap_or_else(|err| println!("{err:?}"));
-        workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
+        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -214,7 +215,7 @@ pub async fn serverless(
         .kill()
         .context("CRITICAL: failed to kill worker {cgroup}")
         .unwrap_or_else(|err| println!("{err:?}"));
-    workerd::cleanup_config_file(tx_hash, workerd_runtime_path)
+    workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
         .await
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
