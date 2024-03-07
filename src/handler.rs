@@ -1,3 +1,5 @@
+use crate::error::ServerlessError;
+use crate::file_manager;
 use crate::{cgroups, model::AppState, workerd};
 
 use actix_web::http::{header, StatusCode};
@@ -59,7 +61,7 @@ pub async fn serverless(
     let tx_hash = &("0x".to_owned() + &data_encoding::HEXLOWER.encode(&tx_hash));
 
     // create code file
-    if let Err(err) = workerd::create_code_file(
+    if let Err(err) = file_manager::create_code_file(
         tx_hash,
         workerd_runtime_path,
         &appstate.rpc,
@@ -67,7 +69,7 @@ pub async fn serverless(
     )
     .await
     {
-        use workerd::ServerlessError::*;
+        use ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
             | TxNotFound
@@ -116,7 +118,7 @@ pub async fn serverless(
     if let Err(err) = port {
         appstate.cgroups.lock().unwrap().release(cgroup);
         return match err {
-            workerd::ServerlessError::BadPort(_) => {
+            ServerlessError::BadPort(_) => {
                 return HttpResponse::InternalServerError().body(format!(
                     "{:?}",
                     anyhow!(err).context("failed to get port for cgroup")
@@ -132,9 +134,11 @@ pub async fn serverless(
     let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
 
     // create config file
-    if let Err(err) = workerd::create_config_file(tx_hash, slug, workerd_runtime_path, port).await {
+    if let Err(err) =
+        file_manager::create_config_file(tx_hash, slug, workerd_runtime_path, port).await
+    {
         appstate.cgroups.lock().unwrap().release(cgroup);
-        use workerd::ServerlessError::*;
+        use ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
             | TxNotFound
@@ -160,7 +164,7 @@ pub async fn serverless(
     let child = workerd::execute(tx_hash, slug, workerd_runtime_path, &cgroup).await;
     if let Err(err) = child {
         // cleanup
-        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+        file_manager::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -182,7 +186,7 @@ pub async fn serverless(
             .kill()
             .context("CRITICAL: failed to kill worker {cgroup}")
             .unwrap_or_else(|err| println!("{err:?}"));
-        workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+        file_manager::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
             .await
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
@@ -215,7 +219,7 @@ pub async fn serverless(
         .kill()
         .context("CRITICAL: failed to kill worker {cgroup}")
         .unwrap_or_else(|err| println!("{err:?}"));
-    workerd::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
+    file_manager::cleanup_config_file(tx_hash, slug, workerd_runtime_path)
         .await
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
