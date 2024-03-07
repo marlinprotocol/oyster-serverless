@@ -13,8 +13,11 @@ struct Args {
     #[clap(long, value_parser, default_value = "6001")]
     port: u16,
 
-    #[clap(long, value_parser, default_value = "./runtime/")]
+    #[clap(long, value_parser, default_value = "./runtime")]
     runtime_path: String,
+
+    #[clap(long, value_parser, default_value = "./runtime/cache")]
+    cache_path: String,
 
     #[clap(long, value_parser, default_value = "www.marlin.org")]
     gateway: String,
@@ -70,6 +73,7 @@ async fn main() -> anyhow::Result<()> {
         cgroups: cgroups.into(),
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
+        cache_path: cli.cache_path,
         rpc: cli.rpc,
         contract: cli.contract,
         signer,

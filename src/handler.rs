@@ -51,6 +51,9 @@ pub async fn serverless(
     }
 
     let workerd_runtime_path = &appstate.runtime_path;
+    let workerd_cache_path = &appstate.cache_path;
+
+    let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
 
     // decode base32 into hex
     let tx_hash = data_encoding::BASE32_NOPAD.decode(tx_hash.to_uppercase().as_bytes());
@@ -63,7 +66,9 @@ pub async fn serverless(
     // create code file
     if let Err(err) = file_manager::create_code_file(
         tx_hash,
+        slug,
         workerd_runtime_path,
+        &workerd_cache_path,
         &appstate.rpc,
         &appstate.contract,
     )
@@ -98,6 +103,12 @@ pub async fn serverless(
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
     if let Err(err) = cgroup {
+        // cleanup
+        file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+            .await
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
+
         return match err {
             cgroups::CgroupsError::NoFree => {
                 return HttpResponse::TooManyRequests().body(format!(
@@ -116,7 +127,13 @@ pub async fn serverless(
     // get port for cgroup
     let port = workerd::get_port(&cgroup);
     if let Err(err) = port {
+        // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
+        file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+            .await
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
+
         return match err {
             ServerlessError::BadPort(_) => {
                 return HttpResponse::InternalServerError().body(format!(
@@ -131,13 +148,18 @@ pub async fn serverless(
         };
     }
     let port = port.unwrap();
-    let slug = &hex::encode(rand::random::<u32>().to_ne_bytes());
 
     // create config file
     if let Err(err) =
         file_manager::create_config_file(tx_hash, slug, workerd_runtime_path, port).await
     {
+        // cleanup
         appstate.cgroups.lock().unwrap().release(cgroup);
+        file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+            .await
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
+
         use ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
@@ -169,6 +191,10 @@ pub async fn serverless(
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
+        file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+            .await
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         return HttpResponse::BadRequest().body(format!(
             "{:?}",
@@ -191,6 +217,10 @@ pub async fn serverless(
             .context("CRITICAL: failed to clean up config file")
             .unwrap_or_else(|err| println!("{err:?}"));
         appstate.cgroups.lock().unwrap().release(cgroup);
+        file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+            .await
+            .context("CRITICAL: failed to clean up code file")
+            .unwrap_or_else(|err| println!("{err:?}"));
 
         let stderr = child.stderr.take().unwrap();
         let reader = BufReader::new(stderr);
@@ -224,6 +254,10 @@ pub async fn serverless(
         .context("CRITICAL: failed to clean up config file")
         .unwrap_or_else(|err| println!("{err:?}"));
     appstate.cgroups.lock().unwrap().release(cgroup);
+    file_manager::cleanup_code_file(tx_hash, slug, workerd_runtime_path)
+        .await
+        .context("CRITICAL: failed to clean up code file")
+        .unwrap_or_else(|err| println!("{err:?}"));
 
     if let Err(err) = response {
         return HttpResponse::RequestTimeout()

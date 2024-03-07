@@ -30,7 +30,8 @@ pub mod serverlesstest {
             .app_data(web::Data::new(AppState {
                 cgroups: Cgroups::new().unwrap().into(),
                 running: AtomicBool::new(true),
-                runtime_path: "./runtime/".to_owned(),
+                runtime_path: "./runtime".to_owned(),
+                cache_path: "./runtime/cache".to_owned(),
                 rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),

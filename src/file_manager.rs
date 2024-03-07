@@ -28,8 +28,8 @@ async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest
     Ok(json_response)
 }
 
-async fn get_number_of_code_files(workerd_runtime_path: &str) -> Result<i32, tokio::io::Error> {
-    let mut reader = fs::read_dir(workerd_runtime_path.to_owned()).await?;
+async fn get_number_of_code_files(workerd_cache_path: &str) -> Result<i32, tokio::io::Error> {
+    let mut reader = fs::read_dir(workerd_cache_path.to_owned()).await?;
 
     let mut count = 0;
     while let Some(entry) = reader.next_entry().await? {
@@ -47,11 +47,11 @@ async fn get_number_of_code_files(workerd_runtime_path: &str) -> Result<i32, tok
     Ok(count)
 }
 
-async fn delete_oldest_code_file(workerd_runtime_path: &str) -> Result<(), tokio::io::Error> {
+async fn delete_oldest_code_file(workerd_cache_path: &str) -> Result<(), tokio::io::Error> {
     let mut file_to_delete = String::new();
     let mut file_modified_time = SystemTime::now();
 
-    let mut reader = fs::read_dir(workerd_runtime_path.to_owned()).await?;
+    let mut reader = fs::read_dir(workerd_cache_path.to_owned()).await?;
 
     while let Some(entry) = reader.next_entry().await? {
         let path = entry.path();
@@ -68,9 +68,8 @@ async fn delete_oldest_code_file(workerd_runtime_path: &str) -> Result<(), tokio
         }
     }
 
-    if let Err(err) = fs::remove_file(workerd_runtime_path.to_owned() + "/" + &file_to_delete).await
-    {
-        if err.kind() != std::io::ErrorKind::NotFound {
+    if let Err(err) = fs::remove_file(workerd_cache_path.to_owned() + "/" + &file_to_delete).await {
+        if err.kind() != tokio::io::ErrorKind::NotFound {
             return Err(err);
         }
     }
@@ -79,30 +78,53 @@ async fn delete_oldest_code_file(workerd_runtime_path: &str) -> Result<(), tokio
 
 pub async fn create_code_file(
     tx_hash: &str,
+    slug: &str,
     workerd_runtime_path: &str,
+    workerd_cache_path: &str,
     rpc: &str,
     contract: &str,
 ) -> Result<(), ServerlessError> {
-    if fs::metadata(&(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js"))
-        .await
-        .is_ok()
-    {
-        let current_time = filetime::FileTime::now();
-        filetime::set_file_times(
-            &(workerd_runtime_path.to_owned() + "/" + tx_hash + ".js"),
-            current_time,
-            current_time,
-        )
-        .map_err(ServerlessError::UpdateModifiedTime)?;
-        return Ok(());
+    let mut file_exists = false;
+    let current_time = filetime::FileTime::now();
+    match filetime::set_file_times(
+        &(workerd_cache_path.to_owned() + "/" + tx_hash + ".js"),
+        current_time,
+        current_time,
+    ) {
+        Ok(_) => {
+            file_exists = true;
+        }
+        Err(err) => {
+            if err.kind() != tokio::io::ErrorKind::NotFound {
+                return Err(ServerlessError::CodeFileCreate(err));
+            }
+        }
     }
 
-    let no_of_files = get_number_of_code_files(workerd_runtime_path)
+    if file_exists {
+        match fs::copy(
+            workerd_cache_path.to_owned() + "/" + tx_hash + ".js",
+            workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js",
+        )
+        .await
+        {
+            Ok(_) => {
+                return Ok(());
+            }
+            Err(err) => {
+                if err.kind() != tokio::io::ErrorKind::NotFound {
+                    return Err(ServerlessError::CodeFileCreate(err));
+                }
+            }
+        }
+    }
+
+    let no_of_files = get_number_of_code_files(workerd_cache_path)
         .await
         .map_err(ServerlessError::CodeFileCreate)?;
 
     if no_of_files >= 40 {
-        delete_oldest_code_file(workerd_runtime_path)
+        delete_oldest_code_file(workerd_cache_path)
             .await
             .map_err(ServerlessError::CodeFileDelete)?;
     }
@@ -110,7 +132,7 @@ pub async fn create_code_file(
     match fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(workerd_runtime_path.to_owned() + "/temp-" + tx_hash + ".js")
+        .open(workerd_cache_path.to_owned() + "/temp-" + tx_hash + ".js")
         .await
     {
         Ok(mut file) => {
@@ -154,11 +176,19 @@ pub async fn create_code_file(
 
             // rename file
             fs::rename(
-                workerd_runtime_path.to_owned() + "/temp-" + tx_hash + ".js",
-                workerd_runtime_path.to_owned() + "/" + tx_hash + ".js",
+                workerd_cache_path.to_owned() + "/temp-" + tx_hash + ".js",
+                workerd_cache_path.to_owned() + "/" + tx_hash + ".js",
             )
             .await
             .map_err(ServerlessError::ConfigFileCreate)?;
+
+            // copy file to runtime with slug
+            fs::copy(
+                workerd_cache_path.to_owned() + "/" + tx_hash + ".js",
+                workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js",
+            )
+            .await
+            .map_err(ServerlessError::CodeFileCreate)?;
 
             return Ok(());
         }
@@ -168,20 +198,37 @@ pub async fn create_code_file(
                 let mut count = 0;
                 while !file_exists && count < 30 {
                     sleep(Duration::from_millis(50)).await;
-                    file_exists = tokio::fs::metadata(
-                        workerd_runtime_path.to_owned() + "/" + tx_hash + ".js",
-                    )
-                    .await
-                    .is_ok();
+                    file_exists =
+                        fs::metadata(workerd_cache_path.to_owned() + "/" + tx_hash + ".js")
+                            .await
+                            .is_ok();
                     count += 1;
                 }
                 if file_exists {
+                    // copy file to runtime with slug
+                    fs::copy(
+                        workerd_cache_path.to_owned() + "/" + tx_hash + ".js",
+                        workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js",
+                    )
+                    .await
+                    .map_err(ServerlessError::CodeFileCreate)?;
                     return Ok(());
                 }
             }
             return Err(ServerlessError::CodeFileCreate(e));
         }
     }
+}
+
+pub async fn cleanup_code_file(
+    tx_hash: &str,
+    slug: &str,
+    workerd_runtime_path: &str,
+) -> Result<(), ServerlessError> {
+    fs::remove_file(workerd_runtime_path.to_owned() + "/" + tx_hash + "-" + slug + ".js")
+        .await
+        .map_err(ServerlessError::CodeFileDelete)?;
+    Ok(())
 }
 
 pub async fn create_config_file(
@@ -201,7 +248,7 @@ const oysterConfig :Workerd.Config = (
 
 const oysterWorker :Workerd.Worker = (
   modules = [
-    (name = \"main\", esModule = embed \"{tx_hash}.js\")
+    (name = \"main\", esModule = embed \"{tx_hash}-{slug}.js\")
   ],
   compatibilityDate = \"2023-03-07\",
 );"

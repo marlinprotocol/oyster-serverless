@@ -4,5 +4,3 @@
 **/*.rs.bk
 
 .vscode/
-
-runtime/*.js
