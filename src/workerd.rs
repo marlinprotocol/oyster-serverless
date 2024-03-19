@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use actix_web::{HttpRequest, HttpResponse};
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
+use reqwest::redirect::Policy;
 use tiny_keccak::{Hasher, Keccak};
 use tokio::net::TcpStream;
 use tokio::time::sleep;
@@ -79,7 +80,9 @@ pub async fn get_workerd_response(
 
     let port_str = port.to_string();
     let req_url = "http://127.0.0.1:".to_string() + &port_str + "/";
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .redirect(Policy::none())
+        .build()?;
     let response = req
         .headers()
         .into_iter()

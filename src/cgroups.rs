@@ -54,7 +54,7 @@ impl Cgroups {
 }
 
 fn get_cgroups() -> Result<Vec<String>, std::io::Error> {
-    Ok(fs::read_dir("/sys/fs/cgroup/memory")?
+    Ok(fs::read_dir("/sys/fs/cgroup")?
         .filter_map(|dir| {
             dir.ok().and_then(|dir| {
                 dir.path().file_name().and_then(|name| {

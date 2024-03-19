@@ -215,8 +215,15 @@ pub async fn create_code_file(
                     return Ok(());
                 }
             }
-            return Err(ServerlessError::CodeFileCreate(e));
+            return Err(ServerlessError::CodeFileCreateTimeout(e));
         }
+    }
+}
+
+pub async fn cleanup_temp_code_file(tx_hash: &str, workerd_cache_path: &str) {
+    match fs::remove_file(workerd_cache_path.to_owned() + "/temp-" + tx_hash + ".js").await {
+        Ok(_) => (),
+        Err(_) => (),
     }
 }
 

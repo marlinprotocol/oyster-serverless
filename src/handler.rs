@@ -75,12 +75,15 @@ pub async fn serverless(
     .await
     {
         use ServerlessError::*;
+        // cleanup temp code file
+        file_manager::cleanup_temp_code_file(tx_hash, workerd_cache_path).await;
         return match err {
             CalldataRetrieve(_)
             | TxNotFound
             | InvalidTxToType
             | InvalidTxToValue(_, _)
             | InvalidTxCalldataType
+            | CodeFileCreateTimeout(_)
             | BadCalldata(_) => HttpResponse::BadRequest().body(format!(
                 "{:?}",
                 anyhow!(err).context("failed to create code file")

@@ -18,6 +18,8 @@ pub enum ServerlessError {
     BadCalldata(#[from] hex::FromHexError),
     #[error("failed to create code file")]
     CodeFileCreate(#[source] tokio::io::Error),
+    #[error("timeout waiting for file to be created")]
+    CodeFileCreateTimeout(#[source] tokio::io::Error),
     #[error("failed to create config file")]
     ConfigFileCreate(#[source] tokio::io::Error),
     #[error("failed to execute workerd")]
