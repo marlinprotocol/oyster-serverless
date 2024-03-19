@@ -1,6 +1,6 @@
 [package]
 name = "oyster-serverless"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2021"
 
 [lib]
@@ -20,6 +20,7 @@ actix-web = "4"
 anyhow = "1.0.75"
 clap = { version = "4.4.7", features = ["derive"] }
 data-encoding = "2.5.0"
+filetime = "0.2.23"
 hex = "0.4.3"
 k256 = { version = "0.13.2", features = ["ecdsa", "ecdsa-core"] }
 openssl = { version = "0.10", features = ["vendored"] }
