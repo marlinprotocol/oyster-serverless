@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
 
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
@@ -9,7 +8,7 @@ use serverless::BillingContract;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use ethers::providers::{Http, Provider};
+use ethers::providers::{Http, Provider, ProviderExt};
 use ethers::types::Address;
 use tokio::fs;
 
@@ -80,9 +79,9 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("invalid signer key")?;
 
-    let rpc_provider = Provider::<Http>::try_from(&cli.rpc)
-        .context("Failed to connect to the rpc")?
-        .interval(Duration::from_millis(1000));
+    let rpc_provider = Provider::<Http>::try_connect(&cli.rpc)
+        .await
+        .context("Failed to connect to the rpc")?;
     let billing_contract = BillingContract::new(
         cli.billing_contract
             .parse::<Address>()
