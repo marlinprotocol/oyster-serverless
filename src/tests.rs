@@ -8,14 +8,20 @@ pub mod serverlesstest {
     use crate::cgroups::Cgroups;
     use crate::handler;
     use crate::model::AppState;
+    use crate::BillingContract;
     use actix_web::{
         body::MessageBody,
         dev::{ServiceFactory, ServiceRequest, ServiceResponse},
         error::Error,
         http, test, web, App,
     };
+    use ethers::providers::{Http, Provider};
+    use ethers::types::Address;
     use serde_json::json;
+    use std::collections::HashMap;
     use std::sync::atomic::AtomicBool;
+    use std::sync::Arc;
+    use std::time::Duration;
 
     fn new_app() -> App<
         impl ServiceFactory<
@@ -26,14 +32,28 @@ pub mod serverlesstest {
             Error = Error,
         >,
     > {
+        let rpc = String::from("https://sepolia-rollup.arbitrum.io/rpc");
+        let billing_contract_add = String::new(); // TODO: ADD BILLING CONTRACT FOR TESTS
+
+        let rpc_provider = Provider::<Http>::try_from(&rpc)
+            .unwrap()
+            .interval(Duration::from_millis(1000));
+        let billing_contract = BillingContract::new(
+            billing_contract_add.parse::<Address>().unwrap(),
+            Arc::new(rpc_provider),
+        );
+
         App::new()
             .app_data(web::Data::new(AppState {
                 cgroups: Cgroups::new().unwrap().into(),
                 running: AtomicBool::new(true),
                 runtime_path: "./runtime/".to_owned(),
-                rpc: "https://sepolia-rollup.arbitrum.io/rpc".to_owned(),
+                rpc: rpc,
                 contract: "0x44fe06d2940b8782a0a9a9ffd09c65852c0156b1".to_owned(),
                 signer: k256::ecdsa::SigningKey::random(&mut rand::rngs::OsRng),
+                billing_contract: billing_contract,
+                execution_costs: HashMap::new().into(),
+                last_bill_claim: (None, None).into(),
             }))
             .default_service(web::to(handler::serverless))
     }

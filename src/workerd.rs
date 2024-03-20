@@ -1,25 +1,31 @@
 use std::process::Child;
 use std::time::{Duration, Instant};
 
-use thiserror::Error;
+use crate::cgroups::{Cgroups, CgroupsError};
+use crate::BillContract;
 
 use actix_web::{HttpRequest, HttpResponse};
+use anyhow::Error;
+use ethers::prelude::*;
 use k256::elliptic_curve::generic_array::sequence::Lengthen;
 use reqwest::redirect::Policy;
 use reqwest::Client;
 use serde_json::{json, Value};
+use thiserror::Error;
 use tiny_keccak::{Hasher, Keccak};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tokio::time::sleep;
 
-use crate::cgroups::{Cgroups, CgroupsError};
-
 #[derive(Error, Debug)]
 pub enum ServerlessError {
     #[error("failed to retrieve calldata")]
     CalldataRetrieve(#[from] reqwest::Error),
+    #[error("failed to retrieve tx deposit")]
+    TxDepositNotFound,
+    #[error("tx deposit not enough")]
+    TxDepositNotEnough,
     #[error("tx not found")]
     TxNotFound,
     #[error("to field of transaction is not an address")]
@@ -44,6 +50,18 @@ pub enum ServerlessError {
     ConfigFileDelete(#[source] tokio::io::Error),
     #[error("failed to retrieve port from cgroup")]
     BadPort(#[source] std::num::ParseIntError),
+}
+
+async fn get_current_deposit(
+    tx_hash: &str,
+    billing_contract: &BillContract,
+) -> Result<U256, Error> {
+    let mut bytes32_tx_hash = [0u8; 32];
+    hex::decode_to_slice(&tx_hash[2..], &mut bytes32_tx_hash)?;
+
+    let deposit = billing_contract.balance_of(bytes32_tx_hash).call().await?;
+
+    Ok(deposit)
 }
 
 async fn get_transaction_data(tx_hash: &str, rpc: &str) -> Result<Value, reqwest::Error> {
@@ -71,6 +89,7 @@ pub async fn create_code_file(
     workerd_runtime_path: &str,
     rpc: &str,
     contract: &str,
+    billing_contract: &BillContract,
 ) -> Result<(), ServerlessError> {
     // get tx data
     let mut tx_data = match get_transaction_data(tx_hash, rpc).await?["result"].take() {
@@ -97,6 +116,15 @@ pub async fn create_code_file(
         Value::String(calldata) => Ok(calldata),
         _ => Err(ServerlessError::InvalidTxCalldataType),
     }?;
+
+    // get tx deposit
+    let tx_deposit = get_current_deposit(tx_hash, billing_contract)
+        .await
+        .map_err(|_| ServerlessError::TxDepositNotFound)?;
+    // TODO: FIX THE FIXED MINIMUM VALUE
+    if tx_deposit <= U256::from(200) {
+        return Err(ServerlessError::TxDepositNotEnough);
+    }
 
     // hex decode calldata by skipping to the code bytes
     let mut calldata = hex::decode(&calldata[138..])?;

@@ -1,10 +1,16 @@
-use actix_web::{web, App, HttpServer};
-use anyhow::{anyhow, Context};
-use clap::Parser;
-use tokio::fs;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use serverless::cgroups::Cgroups;
 use serverless::model::AppState;
+use serverless::BillingContract;
+
+use actix_web::{web, App, HttpResponse, HttpServer};
+use anyhow::{anyhow, Context};
+use clap::Parser;
+use ethers::providers::{Http, Provider, ProviderExt};
+use ethers::types::Address;
+use tokio::fs;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -12,6 +18,9 @@ use serverless::model::AppState;
 struct Args {
     #[clap(long, value_parser, default_value = "6001")]
     port: u16,
+
+    #[clap(long, value_parser)]
+    billing_port: u16, // TODO: ADD THE DEFAULT PORT
 
     #[clap(long, value_parser, default_value = "./runtime/")]
     runtime_path: String,
@@ -34,6 +43,9 @@ struct Args {
     contract: String,
 
     #[clap(long, value_parser)]
+    billing_contract: String, // TODO: ADD A DEFAULT ADDRESS
+
+    #[clap(long, value_parser)]
     signer: String,
 }
 
@@ -52,6 +64,7 @@ async fn main() -> anyhow::Result<()> {
     // println!("{:?}", response);
 
     let port: u16 = cli.port;
+    let billing_port: u16 = cli.billing_port;
 
     let cgroups = Cgroups::new().context("failed to construct cgroups")?;
     if cgroups.free.is_empty() {
@@ -66,14 +79,28 @@ async fn main() -> anyhow::Result<()> {
     )
     .context("invalid signer key")?;
 
+    let rpc_provider = Provider::<Http>::try_connect(&cli.rpc)
+        .await
+        .context("Failed to connect to the rpc")?;
+    let billing_contract = BillingContract::new(
+        cli.billing_contract
+            .parse::<Address>()
+            .context("Failed to parse billing contract address")?,
+        Arc::new(rpc_provider),
+    );
+
     let app_data = web::Data::new(AppState {
         cgroups: cgroups.into(),
         running: std::sync::atomic::AtomicBool::new(true),
         runtime_path: cli.runtime_path,
         rpc: cli.rpc,
         contract: cli.contract,
-        signer,
+        signer: signer,
+        billing_contract: billing_contract,
+        execution_costs: HashMap::new().into(),
+        last_bill_claim: (None, None).into(),
     });
+    let app_data_clone = app_data.clone();
 
     let server = HttpServer::new(move || {
         App::new()
@@ -86,7 +113,21 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Server started on port {}", port);
 
-    server.await?;
+    let billing_server = HttpServer::new(move || {
+        App::new()
+            .app_data(app_data_clone.clone())
+            .service(serverless::billing_handler::inspect_bill)
+            .service(serverless::billing_handler::get_last_bill_claim)
+            .service(serverless::billing_handler::export_bill)
+            .default_service(web::to(HttpResponse::NotFound))
+    })
+    .bind(("0.0.0.0", billing_port))
+    .context(format!("could not bind to port {billing_port}"))?
+    .run();
+
+    println!("Billing Server started on port {}", billing_port);
+
+    tokio::try_join!(server, billing_server)?;
 
     Ok(())
 }

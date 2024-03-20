@@ -1,12 +1,13 @@
-use crate::{cgroups, model::AppState, workerd};
+use std::io::{BufRead, BufReader};
+use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
+
+use crate::model::AppState;
+use crate::{cgroups, workerd};
 
 use actix_web::http::{header, StatusCode};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use anyhow::{anyhow, Context};
-use std::io::{BufRead, BufReader};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
-// use std::time::Instant;
 use tokio::time::timeout;
 
 pub async fn serverless(
@@ -66,12 +67,14 @@ pub async fn serverless(
         workerd_runtime_path,
         &appstate.rpc,
         &appstate.contract,
+        &appstate.billing_contract,
     )
     .await
     {
         use workerd::ServerlessError::*;
         return match err {
             CalldataRetrieve(_)
+            | TxDepositNotEnough
             | TxNotFound
             | InvalidTxToType
             | InvalidTxToValue(_, _)
@@ -91,7 +94,7 @@ pub async fn serverless(
         };
     }
 
-    // let execution_timer_start = Instant::now();
+    let execution_timer_start = Instant::now();
 
     // reserve cgroup
     let cgroup = appstate.cgroups.lock().unwrap().reserve();
@@ -153,22 +156,13 @@ pub async fn serverless(
 
         use workerd::ServerlessError::*;
         return match err {
-            CalldataRetrieve(_)
-            | TxNotFound
-            | InvalidTxToType
-            | InvalidTxToValue(_, _)
-            | InvalidTxCalldataType
-            | BadCalldata(_) => HttpResponse::BadRequest().body(format!(
+            ConfigFileCreate(_) => HttpResponse::InternalServerError().body(format!(
                 "{:?}",
-                anyhow!(err).context("failed to create code file")
-            )),
-            CodeFileCreate(_) => HttpResponse::InternalServerError().body(format!(
-                "{:?}",
-                anyhow!(err).context("failed to create code file")
+                anyhow!(err).context("failed to create config file")
             )),
             _ => HttpResponse::InternalServerError().body(format!(
                 "{:?}",
-                anyhow!(err).context("unexpected error while trying to create code file")
+                anyhow!(err).context("unexpected error while trying to create config file")
             )),
         };
     }
@@ -250,6 +244,22 @@ pub async fn serverless(
         .context("CRITICAL: failed to clean up code file")
         .unwrap_or_else(|err| println!("{err:?}"));
 
+    let execution_timer_end = Instant::now();
+    let execution_time = execution_timer_end
+        .duration_since(execution_timer_start)
+        .as_millis();
+
+    // TODO: FIX THE VALUE OF FIXED COST AND CONVERSION RATE
+    let execution_cost = 1 + 2 * execution_time;
+
+    appstate
+        .execution_costs
+        .lock()
+        .unwrap()
+        .entry(tx_hash.to_owned())
+        .and_modify(|cost| *cost += execution_cost)
+        .or_insert(execution_cost);
+
     if let Err(err) = response {
         return HttpResponse::RequestTimeout()
             .body(format!("{:?}", anyhow!(err).context("worker timed out")));
@@ -263,13 +273,6 @@ pub async fn serverless(
         ));
     }
     let response = response.unwrap();
-
-    // let execution_timer_end = Instant::now();
-    // let execution_time = execution_timer_end
-    //     .duration_since(execution_timer_start)
-    //     .as_millis()
-    //     .to_string();
-    // println!("Execution time: {}ms", execution_time);
 
     return response;
 }
